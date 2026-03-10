@@ -1,0 +1,69 @@
+name: CI Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+
+  build:
+
+    strategy:
+      matrix:
+        configuration: [Release]
+
+    runs-on: windows-2022
+      
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Visual Studio Command Prompt
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    # Install the .NET Core workload
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+        
+    - name: Install VPK
+      run: |
+        dotnet tool install -g vpk
+      shell: pwsh
+
+    # Restore the application to populate the obj folder with RuntimeIdentifiers
+    - name: Restore dependencies
+      run: dotnet restore
+
+      
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Publish
+      run: dotnet publish -c Release --self-contained -r win-x64 /p:PlatformTarget=x64 --output publish
+
+    - name: Create VPK package
+      run: |
+        $VERSION = "${{ github.ref_name }}" -replace '^v', ''
+        vpk pack --packId clawcage --packVersion $VERSION --packDir publish --mainExe ClawCage.WinUI.exe
+      shell: pwsh
+      
+    - name: Zip Releases directory
+      run: |
+        Compress-Archive -Path ./Releases/* -DestinationPath "./ClawCage-${{ github.ref_name }}.zip" -Force
+        Write-Host "Created archive: ClawCage-${{ github.ref_name }}.zip"
+      shell: pwsh
+
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          ./Releases/clawcage-win-Setup.exe
+          ./Releases/clawcage-win-Portable.zip
+          ./ClawCage-${{ github.ref_name }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
