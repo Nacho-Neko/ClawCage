@@ -1,0 +1,176 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ClawCage.WinUI.Pages.InitialDeployPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Page header -->
+        <StackPanel Grid.Row="0" Padding="40,32,40,20" Spacing="4">
+            <TextBlock Text="初始化部署" Style="{StaticResource TitleLargeTextBlockStyle}"/>
+            <TextBlock Text="配置以下运行环境后即可进入 ClawCage。" Style="{StaticResource BodyTextBlockStyle}" Opacity="0.7"/>
+        </StackPanel>
+
+        <!-- Environment table -->
+        <ScrollViewer Grid.Row="1" Padding="40,0,40,0">
+            <StackPanel Spacing="12">
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <StackPanel>
+                    <!-- Column header row -->
+                    <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="8,8,0,0" Padding="20,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="160"/>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="230"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="运行环境" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Grid.Column="1" Text="当前版本" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Grid.Column="2" Text="目标版本" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Grid.Column="3" Text="操作" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </Border>
+                    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+                    <!-- Node.js row -->
+                    <Grid Padding="20,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="230"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Name + description -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE756;" FontSize="16" VerticalAlignment="Center"/>
+                            <StackPanel VerticalAlignment="Center" Spacing="1">
+                                <TextBlock Text="Node.js" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                <TextBlock Text="JavaScript 运行时" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.6"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <!-- Current version + mode switch toggle -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <ProgressRing x:Name="NodeDetectRing" IsActive="False" Width="14" Height="14" Visibility="Collapsed"/>
+                            <FontIcon x:Name="NodeStatusIcon" FontFamily="Segoe MDL2 Assets" Glyph="&#xE711;" FontSize="13" Visibility="Collapsed" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="NodeCurrentVersionText" Text="待检测" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                           
+                        </StackPanel>
+                        <!-- Target version selector + requirement icon -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                            <ProgressRing x:Name="NodeVersionLoadingRing" Width="14" Height="14" IsActive="False" Visibility="Collapsed" VerticalAlignment="Center"/>
+                            <ComboBox x:Name="NodeVersionComboBox" MinWidth="188" MaxWidth="200" PlaceholderText="加载版本列表…" SelectionChanged="NodeVersionComboBox_SelectionChanged"/>
+                            <Button x:Name="VersionRequirementButton"
+                                    Width="24"
+                                    Height="24"
+                                    MinWidth="24"
+                                    MinHeight="24"
+                                    Padding="0"
+                                    CornerRadius="12"
+                                    Visibility="Collapsed"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Click="VersionRequirementButton_Click">
+                                <FontIcon x:Name="VersionRequirementIcon" FontFamily="Segoe MDL2 Assets" Glyph="&#xE73E;" FontSize="12" VerticalAlignment="Center"/>
+                            </Button>
+                        </StackPanel>
+                        <!-- Action buttons / Download progress -->
+                        <Grid Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button x:Name="NodeInstallButton" Content="安装" MinWidth="76" IsEnabled="False" Visibility="Collapsed" Click="NodeInstallButton_Click"/>
+                                <Button x:Name="NodeUninstallButton" Content="卸载" MinWidth="64" IsEnabled="False" Visibility="Collapsed" Click="NodeUninstallButton_Click"/>
+                            </StackPanel>
+                            <!-- Microsoft Store-style download progress -->
+                            <StackPanel x:Name="NodeDownloadPanel" Orientation="Horizontal" Spacing="14" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed">
+                                <Grid Width="52" Height="52" VerticalAlignment="Center">
+                                    <ProgressRing x:Name="NodeDownloadRing" Width="52" Height="52" Minimum="0" Maximum="100" Value="0" IsIndeterminate="True"/>
+                                    <TextBlock x:Name="NodeDownloadPercentText" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" FontSize="11"/>
+                                </Grid>
+                                <StackPanel VerticalAlignment="Center" Spacing="2" MinWidth="100">
+                                    <TextBlock x:Name="NodeDownloadPhaseText" Text="连接服务器…" Style="{StaticResource CaptionTextBlockStyle}"/>
+                                    <TextBlock x:Name="NodeDownloadSizeText" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.6"/>
+                                </StackPanel>
+                                <Button x:Name="NodeCancelButton" Content="取消" MinWidth="60" VerticalAlignment="Center" Click="NodeCancelButton_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+                    <!-- PortableGit row -->
+                    <Grid Padding="20,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="230"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE7A1;" FontSize="16" VerticalAlignment="Center"/>
+                            <StackPanel VerticalAlignment="Center" Spacing="1">
+                                <TextBlock Text="PortableGit" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                <TextBlock Text="Git 命令行环境" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.6"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <ProgressRing x:Name="GitDetectRing" IsActive="False" Width="14" Height="14" Visibility="Collapsed"/>
+                            <FontIcon x:Name="GitStatusIcon" FontFamily="Segoe MDL2 Assets" Glyph="&#xE711;" FontSize="13" Visibility="Collapsed" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="GitCurrentVersionText" Text="待检测" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="v2.48.1.windows.1" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                        <Grid Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button x:Name="GitInstallButton" Content="安装" MinWidth="76" IsEnabled="False" Visibility="Collapsed" Click="GitInstallButton_Click"/>
+                                <Button x:Name="GitUninstallButton" Content="卸载" MinWidth="64" IsEnabled="False" Visibility="Collapsed" Click="GitUninstallButton_Click"/>
+                            </StackPanel>
+                            <StackPanel x:Name="GitDownloadPanel" Orientation="Horizontal" Spacing="14" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed">
+                                <Grid Width="52" Height="52" VerticalAlignment="Center">
+                                    <ProgressRing x:Name="GitDownloadRing" Width="52" Height="52" Minimum="0" Maximum="100" Value="0" IsIndeterminate="True"/>
+                                    <TextBlock x:Name="GitDownloadPercentText" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" FontSize="11"/>
+                                </Grid>
+                                <StackPanel VerticalAlignment="Center" Spacing="2" MinWidth="100">
+                                    <TextBlock x:Name="GitDownloadPhaseText" Text="连接服务器…" Style="{StaticResource CaptionTextBlockStyle}"/>
+                                    <TextBlock x:Name="GitDownloadSizeText" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.6"/>
+                                </StackPanel>
+                                <Button x:Name="GitCancelButton" Content="取消" MinWidth="60" VerticalAlignment="Center" Click="GitCancelButton_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </StackPanel>
+                </Border>
+                <!-- System Node.js info -->
+                <InfoBar x:Name="NodeModeInfoBar" Title="当前使用系统 Node.js" Message="ClawCage 将使用系统已安装的 Node.js 运行 Agent。若需在所选路径单独部署，点击切换。" Severity="Informational" IsOpen="False" IsClosable="False"/>
+                <!-- npm verification result -->
+                <InfoBar x:Name="NpmStatusInfoBar" Title="npm 验证" Severity="Success" IsOpen="False" IsClosable="False"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Grid Grid.Row="2" Padding="40,16,40,32">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0" Click="BackButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72B;" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="返回重选路径"/>
+                </StackPanel>
+            </Button>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="RecheckButton" Content="重新检测" Click="RecheckButton_Click"/>
+                <Button x:Name="ContinueButton" Style="{StaticResource AccentButtonStyle}" IsEnabled="False" Click="ContinueButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="开始部署"/>
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72A;" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

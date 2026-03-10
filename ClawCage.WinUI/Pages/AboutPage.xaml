@@ -1,0 +1,61 @@
+﻿<Page
+    x:Class="ClawCage.WinUI.Pages.AboutPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <Grid>
+        <StackPanel VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Spacing="0"
+                    Margin="0,-40,0,0">
+
+            <!-- App Icon -->
+            <Image Source="ms-appx:///Assets/icon-64.png"
+                   Width="80"
+                   Height="80"
+                   HorizontalAlignment="Center"/>
+
+            <!-- App Name -->
+            <TextBlock Text="ClawCage"
+                       FontSize="28"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
+                       Margin="0,20,0,4"/>
+
+            <!-- Version -->
+            <TextBlock Text="版本 1.0.0"
+                       FontSize="13"
+                       Opacity="0.55"
+                       HorizontalAlignment="Center"/>
+
+            <!-- Divider -->
+            <Rectangle Height="1"
+                       Width="240"
+                       Margin="0,24,0,24"
+                       Fill="{ThemeResource DividerStrokeColorDefaultBrush}"
+                       HorizontalAlignment="Center"/>
+
+            <!-- Company -->
+            <TextBlock Text="武汉市米糕网络科技有限责任公司"
+                       FontSize="13"
+                       HorizontalAlignment="Center"
+                       Opacity="0.75"/>
+
+            <!-- Website -->
+            <HyperlinkButton Content="mekou.net"
+                             NavigateUri="https://mekou.net/"
+                             HorizontalAlignment="Center"
+                             FontSize="13"
+                             Margin="0,2,0,0"/>
+
+            <!-- Copyright -->
+            <TextBlock Text="© 2026 保留所有权利，抄袭必究"
+                       FontSize="12"
+                       Opacity="0.45"
+                       HorizontalAlignment="Center"
+                       Margin="0,20,0,0"/>
+
+        </StackPanel>
+    </Grid>
+</Page>
