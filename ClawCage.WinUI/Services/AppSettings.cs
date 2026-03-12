@@ -1,12 +1,13 @@
 using LiteDB;
 using System;
 using System.IO;
+using Velopack.Locators;
 
 namespace ClawCage.WinUI.Services
 {
     internal static class AppSettings
     {
-        private const string DataDirName = ".claw.data";
+        private const string DataDirName = "config";
         private const string DbFileName = "app-settings.db";
         private const string CollectionName = "settings";
 
@@ -89,8 +90,9 @@ namespace ClawCage.WinUI.Services
 
         private static string GetDatabasePath()
         {
+            IVelopackLocator locator = VelopackLocator.Current;
             return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                locator.AppContentDir ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 DataDirName,
                 DbFileName);
         }
