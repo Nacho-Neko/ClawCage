@@ -5,10 +5,14 @@ on:
     tags:
       - 'v*'
 
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+      
 jobs:
-
   build:
-
     strategy:
       matrix:
         configuration: [Release]
@@ -46,11 +50,18 @@ jobs:
     - name: Publish
       run: dotnet publish -c Release --self-contained -r win-x64 /p:PlatformTarget=x64 --output publish
 
+
+    - name: Generate artifact attestation
+      uses: actions/attest-build-provenance@v3
+      with:
+        subject-path: 'publish/*.exe'
+
     - name: Create VPK package
       run: |
         $VERSION = "${{ github.ref_name }}" -replace '^v', ''
-        vpk pack --packId clawcage --packVersion $VERSION --packDir publish --mainExe ClawCage.WinUI.exe
+        vpk pack --packId ClawCage --packVersion $VERSION --packDir publish --mainExe ClawCage.WinUI.exe
       shell: pwsh
+
       
     - name: Zip Releases directory
       run: |
@@ -58,12 +69,16 @@ jobs:
         Write-Host "Created archive: ClawCage-${{ github.ref_name }}.zip"
       shell: pwsh
 
+    - name: Generate artifact attestation
+      uses: actions/attest-build-provenance@v3
+      with:
+        subject-path: './Releases/ClawCage-win-Setup.exe'
+
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          ./Releases/clawcage-win-Setup.exe
-          ./Releases/clawcage-win-Portable.zip
+          ./Releases/ClawCage-win-Setup.exe
           ./ClawCage-${{ github.ref_name }}.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
