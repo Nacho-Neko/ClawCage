@@ -16,18 +16,9 @@
 		<EnablePreviewMsixTooling>true</EnablePreviewMsixTooling>
 	</PropertyGroup>
 	
-	
-	<ItemGroup>
-	  <Content Remove="Assets\Square150x150Logo.png" />
-	  <Content Remove="Assets\Square16x16Logo.png" />
-	  <Content Remove="Assets\Square44x44Logo.png" />
-	  <Content Remove="Assets\Wide310x150Logo.png" />
-	</ItemGroup>
-
 	<ItemGroup>
 		<Manifest Include="$(ApplicationManifest)" />
 	</ItemGroup>
-
 
 	<ItemGroup>
 		<PackageReference Include="CliWrap" Version="3.10.0" />
@@ -39,9 +30,13 @@
 		<PackageReference Include="Velopack" Version="0.0.1298" />
 	</ItemGroup>
 
-
 	<ItemGroup>
-	  <Folder Include="Properties\" />
+	  <Content Include="Asset\Softs\**\*.*">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Asset\Providers\**\*.png">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 	
 </Project>
