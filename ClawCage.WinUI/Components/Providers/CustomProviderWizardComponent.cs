@@ -14,8 +14,8 @@ namespace ClawCage.WinUI.Components.Providers
         public string? DefaultApi => null;
 
 
-        private const string OpenAiCompatibleApi = "openai-compatible";
-        private const string AnthropicCompatibleApi = "anthropic-compatible";
+        private const string OpenAiCompatibleApi = "openai-completions";
+        private const string AnthropicCompatibleApi = "anthropic-completions";
 
 
         public async Task<bool> ConfigureNewProviderAsync(XamlRoot xamlRoot, ProviderDraft draft)
