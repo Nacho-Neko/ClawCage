@@ -16,18 +16,37 @@
     <Grid>
         <Frame x:Name="RootFrame"/>
 
+        <Border x:Name="UpdateCheckingBanner"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,16,0,0"
+                Padding="16,8,20,8"
+                CornerRadius="20"
+                BorderThickness="1"
+                Background="{ThemeResource LayerOnMicaBaseAltFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Visibility="Collapsed"
+                Translation="0,0,32">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <ProgressRing Width="16" Height="16" IsActive="True"/>
+                <TextBlock x:Name="UpdateCheckingText"
+                           Text="正在检查更新..."
+                           FontSize="13"
+                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
         <InfoBar x:Name="UpdateInfoBar"
-                 Title="正在检查更新"
-                 Message="正在连接服务器检查新版本..."
+                 Title="检查完成"
+                 Message="当前已是最新版本"
                  Severity="Informational"
                  IsClosable="False"
                  IsOpen="False"
                  HorizontalAlignment="Center"
                  VerticalAlignment="Top"
-                 Margin="0,20,0,0">
-            <InfoBar.Content>
-                <ProgressRing Width="20" Height="20" Margin="0,8,0,0" HorizontalAlignment="Left"/>
-            </InfoBar.Content>
-        </InfoBar>
+                 Margin="0,20,0,0"
+                 MinWidth="520"
+                 MaxWidth="720"/>
     </Grid>
 </Window>

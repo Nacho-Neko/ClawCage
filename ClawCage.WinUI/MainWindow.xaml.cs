@@ -59,30 +59,26 @@ namespace ClawCage.WinUI
         {
             try
             {
-                // 显示检查更新UI
-                UpdateInfoBar.Severity = InfoBarSeverity.Informational;
-                UpdateInfoBar.Title = "正在检查更新";
-                UpdateInfoBar.Message = "正在连接服务器检查新版本...";
-                if (UpdateInfoBar.Content is not ProgressRing)
-                {
-                    UpdateInfoBar.Content = new ProgressRing { Width = 20, Height = 20, Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
-                }
-                UpdateInfoBar.IsOpen = true;
+                UpdateInfoBar.IsOpen = false;
+                UpdateCheckingText.Text = "正在连接服务器检查新版本...";
+                UpdateCheckingBanner.Visibility = Visibility.Visible;
 
                 var mgr = new UpdateManager("https://claw.mekou.net/releases");
                 var newVersionInfo = await mgr.CheckForUpdatesAsync();
 
                 if (newVersionInfo == null)
                 {
+                    UpdateCheckingBanner.Visibility = Visibility.Collapsed;
                     UpdateInfoBar.Severity = InfoBarSeverity.Success;
                     UpdateInfoBar.Title = "检查完成";
                     UpdateInfoBar.Message = "当前已是最新版本";
-                    UpdateInfoBar.Content = null;
+                    UpdateInfoBar.IsOpen = true;
                     await Task.Delay(2000);
                     UpdateInfoBar.IsOpen = false;
                     return;
                 }
                 // 检查完毕且有新版本，隐藏UI并显示对话框
+                UpdateCheckingBanner.Visibility = Visibility.Collapsed;
                 UpdateInfoBar.IsOpen = false;
                 var upcomingVersion = newVersionInfo.TargetFullRelease.Version;
                 var currentVersion = mgr.CurrentVersion;
@@ -91,15 +87,25 @@ namespace ClawCage.WinUI
 
                 if (forceUpdate)
                 {
+                    var cts = new System.Threading.CancellationTokenSource();
+                    var forceExitTask = Task.Delay(TimeSpan.FromMinutes(1), cts.Token).ContinueWith(_ =>
+                    {
+                        DispatcherQueue.TryEnqueue(() => Application.Current.Exit());
+                    }, TaskContinuationOptions.OnlyOnRanToCompletion);
+
                     var dialog = new ContentDialog
                     {
                         Title = "发现重要更新",
-                        Content = $"检测到重大版本更新 v{upcomingVersion}，为了提供更好的体验，必须进行更新。\n当前版本：v{currentVersion}",
+                        Content = $"检测到重大版本更新 v{upcomingVersion}，为了提供更好的体验，必须进行更新。\n当前版本：v{currentVersion}\n\n若 1 分钟内未操作，应用将自动关闭。",
                         PrimaryButtonText = "立即更新",
                         XamlRoot = this.Content.XamlRoot
                     };
 
                     await dialog.ShowAsync();
+                    await cts.CancelAsync();
+
+                    UpdateCheckingText.Text = "正在下载更新...";
+                    UpdateCheckingBanner.Visibility = Visibility.Visible;
                     await mgr.DownloadUpdatesAsync(newVersionInfo);
                     mgr.ApplyUpdatesAndRestart(newVersionInfo);
                 }
@@ -117,18 +123,21 @@ namespace ClawCage.WinUI
                     var result = await dialog.ShowAsync();
                     if (result == ContentDialogResult.Primary)
                     {
+                        UpdateCheckingText.Text = "正在下载更新...";
+                        UpdateCheckingBanner.Visibility = Visibility.Visible;
                         await mgr.DownloadUpdatesAsync(newVersionInfo);
                         mgr.ApplyUpdatesAndRestart(newVersionInfo);
                     }
                 }
             }
-            catch (NotInstalledException ex)
+            catch (NotInstalledException)
             {
-                return; // 没有安装更新组件，跳过检查更新
+                UpdateCheckingBanner.Visibility = Visibility.Collapsed;
+                return;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Update checking failed: {ex}");
+                UpdateCheckingBanner.Visibility = Visibility.Collapsed;
                 UpdateInfoBar.IsOpen = false;
 
                 var dialog = new ContentDialog
