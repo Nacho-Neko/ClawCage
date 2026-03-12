@@ -34,7 +34,7 @@
                               VerticalAlignment="Center"
                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                     <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-                        <TextBlock Text="Gateway 模式"
+                        <TextBlock Text="Gateway 模式(默认)"
                                    Style="{StaticResource BodyStrongTextBlockStyle}"/>
                         <TextBlock Text="作为网关，统筹集群并接收发往 Node 节点的请求"
                                    Style="{StaticResource BodyTextBlockStyle}"

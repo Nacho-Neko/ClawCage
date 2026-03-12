@@ -4,23 +4,45 @@
       Background="Transparent">
 
     <Grid Padding="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
-            <TextBlock x:Name="StatusText" HorizontalAlignment="Center" FontSize="22" FontWeight="SemiBold" Text="OpenClaw Overview"/>
-            <ProgressRing x:Name="BusyRing" Width="42" Height="42" IsActive="False" Visibility="Collapsed"/>
-            <TextBlock x:Name="BusyText" HorizontalAlignment="Center" Opacity="0.8" Visibility="Collapsed" Text="Working..."/>
+        <Button Grid.Row="0"
+                Width="42"
+                Height="42"
+                CornerRadius="21"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Command="{x:Bind ViewModel.HelpCommand}"
+                IsEnabled="{x:Bind ViewModel.IsHelpEnabled, Mode=OneWay}">
+            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE897;" FontSize="18"/>
+            <ToolTipService.ToolTip>
+                <ToolTip Content="帮助"/>
+            </ToolTipService.ToolTip>
+        </Button>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
-                <Button x:Name="RunButton" MinWidth="120" Height="42" Click="RunButton_Click">
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+            <TextBlock HorizontalAlignment="Center" FontSize="22" FontWeight="SemiBold" Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"/>
+            <ProgressRing Width="42" Height="42" IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Visibility="{x:Bind ViewModel.BusyVisibility, Mode=OneWay}"/>
+            <TextBlock HorizontalAlignment="Center" Opacity="0.8" Visibility="{x:Bind ViewModel.BusyVisibility, Mode=OneWay}" Text="{x:Bind ViewModel.BusyText, Mode=OneWay}"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" Visibility="{x:Bind ViewModel.ActionButtonsVisibility, Mode=OneWay}">
+                <Button MinWidth="136" Height="46" Padding="16,0" Command="{x:Bind ViewModel.RunCommand}" Background="{x:Bind ViewModel.RunButtonBackground, Mode=OneWay}" Foreground="{x:Bind ViewModel.RunButtonForeground, Mode=OneWay}">
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="Black"/>
+                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="Black"/>
+                        <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#80FFFFFF"/>
+                    </Button.Resources>
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon x:Name="RunButtonIcon" FontFamily="Segoe MDL2 Assets" Glyph="&#xE8FB;"/>
-                        <TextBlock x:Name="RunButtonText" Text="Initialize"/>
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="{x:Bind ViewModel.RunButtonGlyph, Mode=OneWay}"/>
+                        <TextBlock Text="{x:Bind ViewModel.RunButtonText, Mode=OneWay}"/>
                     </StackPanel>
                 </Button>
 
-                <Button x:Name="HelpButton" MinWidth="100" Height="42" Content="Help" Click="HelpButton_Click"/>
-                <Button x:Name="OpenConsoleButton" MinWidth="120" Height="42" Content="打开控制台" Click="OpenConsoleButton_Click"/>
-                <Button x:Name="RestartButton" MinWidth="100" Height="42" Content="Restart" Click="RestartButton_Click" Visibility="Collapsed"/>
+                <Button MinWidth="120" Height="42" Content="控制台" Command="{x:Bind ViewModel.OpenConsoleCommand}" Visibility="{x:Bind ViewModel.OpenConsoleVisibility, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.OpenConsoleEnabled, Mode=OneWay}"/>
+                <Button MinWidth="100" Height="42" Content="重启" Command="{x:Bind ViewModel.RestartCommand}" Visibility="{x:Bind ViewModel.RestartButtonVisibility, Mode=OneWay}"/>
             </StackPanel>
         </StackPanel>
 

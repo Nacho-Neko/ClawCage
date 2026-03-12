@@ -15,10 +15,10 @@ namespace ClawCage.WinUI.Services.Tools.Download
 {
     internal static class NodeJsDownloader
     {
-        private const string IndexUrl = "https://mirrors.tuna.tsinghua.edu.cn/nodejs-release/index.json";
-        private const string DownloadBase = "https://mirrors.tuna.tsinghua.edu.cn/nodejs-release/";
+        private const string IndexUrl = "https://cdn.npmmirror.com/binaries/node/index.json";
+        private const string DownloadBase = "https://cdn.npmmirror.com/binaries/node/";
         private static readonly HttpClient Http = Downloader.CreateHttpClient(
-            "https://mirrors.tuna.tsinghua.edu.cn/",
+            "https://cdn.npmmirror.com/",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
             "zh-CN,zh;q=0.9,en;q=0.8");
 
@@ -64,7 +64,7 @@ namespace ClawCage.WinUI.Services.Tools.Download
 
             return all
                 .Where(v => v.Files?.Contains($"win-{NodeArchSuffix}-zip") == true
-                         && ParseVer(v.Version).Major >= 20)
+                         && ParseVer(v.Version).Major >= 22)
                 .GroupBy(v => ParseVer(v.Version).Major)
                 .Select(g => g.OrderByDescending(v => ParseVer(v.Version)).First())
                 .OrderByDescending(v => ParseVer(v.Version))

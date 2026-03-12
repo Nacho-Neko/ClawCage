@@ -1,24 +1,19 @@
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Windows.Media.Protection.PlayReady;
 
 namespace ClawCage.WinUI.Services.OpenClaw
 {
     internal static class ProviderApiTestService
     {
-        private static readonly HttpClient HttpClient = new();
-
+        private static readonly HttpClient httpClient = new();
 
         internal static async Task<(bool Success, string Message)> TestCompatibleAsync(string apiKey, string requestUri, string model)
         {
             if (string.IsNullOrWhiteSpace(apiKey))
                 return (false, "测试失败：API Key 不能为空。");
 
-            HttpClient httpClient = new HttpClient();
             var payload = new
             {
                 model,
@@ -40,8 +35,6 @@ namespace ClawCage.WinUI.Services.OpenClaw
 
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
             using var response = await httpClient.PostAsync(requestUri, content);
-
-            var responseBody = await response.Content.ReadAsStringAsync();
 
             return response.IsSuccessStatusCode
                 ? (true, $"{(int)response.StatusCode}")

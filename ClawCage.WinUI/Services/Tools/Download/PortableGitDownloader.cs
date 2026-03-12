@@ -87,7 +87,7 @@ namespace ClawCage.WinUI.Services.Tools.Download
                     Directory.Delete(targetDir, recursive: true);
                 Directory.CreateDirectory(targetDir);
 
-           
+
                 progress.Report(new(DownloadPhase.Extracting, target.Total, target.Total));
 
                 await ExtractPortableGitArchiveAsync(tempFile, targetDir, ct);

@@ -27,9 +27,17 @@
                 </StackPanel>
             </StackPanel>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Spacing="10">
-                <Button Content="增加模型" Click="AddModelButton_Click" MinWidth="92" VerticalAlignment="Center"/>
-                <Button Content="刷新" Click="ReloadButton_Click" MinWidth="72" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Spacing="8">
+                <Button Click="AddProviderButton_Click"
+                        Width="34" Height="34" Padding="0" VerticalAlignment="Center"
+                        ToolTipService.ToolTip="增加供应商">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE710;" FontSize="15"/>
+                </Button>
+                <Button Click="ReloadButton_Click"
+                        Width="34" Height="34" Padding="0" VerticalAlignment="Center"
+                        ToolTipService.ToolTip="刷新">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72C;" FontSize="15"/>
+                </Button>
             </StackPanel>
         </Grid>
 
@@ -55,7 +63,10 @@
                         <components:ProviderCard
                             Item="{Binding}"
                             EditProviderRequested="ProviderCard_EditProviderRequested"
-                            EditModelRequested="ProviderCard_EditModelRequested"/>
+                            EditModelRequested="ProviderCard_EditModelRequested"
+                            AddModelRequested="ProviderCard_AddModelRequested"
+                            DeleteProviderRequested="ProviderCard_DeleteProviderRequested"
+                            DeleteModelRequested="ProviderCard_DeleteModelRequested"/>
 
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

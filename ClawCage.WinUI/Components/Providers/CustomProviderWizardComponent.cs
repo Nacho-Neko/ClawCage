@@ -7,8 +7,9 @@ namespace ClawCage.WinUI.Components.Providers
     internal sealed class CustomProviderWizardComponent : IProviderWizardComponent
     {
         public string Key => "custom";
-        public string Title => "自定义 Provider";
-        public string Description => "自定义 API URL 与 Endpoint compatibility";
+        public string Title => "自定义";
+        public string Description => "任意第三方模型";
+        public string? IconResourceName => null;
         public bool IsCustom => true;
         public string? DefaultBaseUrl => null;
         public string? DefaultApi => null;

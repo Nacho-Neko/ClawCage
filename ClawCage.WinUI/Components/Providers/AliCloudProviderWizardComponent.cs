@@ -13,9 +13,10 @@ namespace ClawCage.WinUI.Components.Providers
         private const string OpenAiCompatibleApi = "openai-completions";
         private const string AnthropicCompatibleApi = "anthropic-completions";
 
-        public string Key => "AliCloud";
-        public string Title => "AliCloud 百炼";
-        public string Description => "阿里云百炼平台";
+        public string Key => "AliCloud-Coding";
+        public string Title => "AliCloud Coding Plan";
+        public string Description => "阿里云 Coding Plan 平台";
+        public string? IconResourceName => "alicloud";
         public bool IsCustom => false;
         public string? DefaultBaseUrl => "https://coding.dashscope.aliyuncs.com/v1";
         public string? DefaultApi => OpenAiCompatibleApi;
@@ -50,7 +51,7 @@ namespace ClawCage.WinUI.Components.Providers
 
             dialog = new ContentDialog
             {
-                Title = "AliCloud 配置",
+                Title = "AliCloud Coding Plan 配置",
                 PrimaryButtonText = "测试",
                 CloseButtonText = "取消",
                 DefaultButton = ContentDialogButton.Primary,
@@ -102,7 +103,7 @@ namespace ClawCage.WinUI.Components.Providers
             if (result != ContentDialogResult.Primary)
                 return false;
 
-            draft.ProviderKey = "AliCloud";
+            draft.ProviderKey = "AliCloud-Coding";
             draft.BaseUrl = "https://coding.dashscope.aliyuncs.com/v1";
             draft.ApiKey = apiKeyBox.Password;
             draft.Api = apiCombo.SelectedItem?.ToString() ?? OpenAiCompatibleApi;

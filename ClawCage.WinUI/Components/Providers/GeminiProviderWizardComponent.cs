@@ -8,6 +8,7 @@ namespace ClawCage.WinUI.Components.Providers
         public string Key => "gemini";
         public string Title => "Gemini";
         public string Description => "Google Gemini";
+        public string? IconResourceName => "gemini";
         public bool IsCustom => false;
         public string? DefaultBaseUrl => null;
         public string? DefaultApi => "google-generative-ai";

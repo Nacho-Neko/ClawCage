@@ -6,9 +6,9 @@ namespace ClawCage.WinUI.Services.Tools.Helper
 {
     internal static class FolderPickerHelper
     {
-        private const uint FOS_PICKFOLDERS     = 0x00000020;
+        private const uint FOS_PICKFOLDERS = 0x00000020;
         private const uint FOS_FORCEFILESYSTEM = 0x00000040;
-        private const int  SIGDN_FILESYSPATH   = unchecked((int)0x80058000);
+        private const int SIGDN_FILESYSPATH = unchecked((int)0x80058000);
 
         [DllImport("shell32", CharSet = CharSet.Unicode, PreserveSig = false)]
         private static extern void SHCreateItemFromParsingName(

@@ -16,20 +16,47 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Width="36" Height="36" CornerRadius="8" VerticalAlignment="Center"
-                        Background="{ThemeResource AccentFillColorDefaultBrush}">
-                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8B2;" FontSize="15"
-                              Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
-                </Border>
+                <Grid Width="36" Height="36" VerticalAlignment="Center">
+                    <Border x:Name="DefaultIconBorder" Width="36" Height="36" CornerRadius="8"
+                            Background="{ThemeResource AccentFillColorDefaultBrush}">
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8B2;" FontSize="15"
+                                  Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" 
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border x:Name="ProviderIconBorder" Width="36" Height="36" CornerRadius="8"
+                            BorderThickness="1"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            Background="White" Padding="4" Visibility="Collapsed">
+                        <Image x:Name="ProviderIconImage"
+                               Stretch="Uniform"
+                               VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
+                </Grid>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                     <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Item.Name, ElementName=Root}"/>
                     <TextBlock FontSize="12" Opacity="0.55" Text="{Binding Item.ModelsCountText, ElementName=Root}"/>
                 </StackPanel>
 
-                <Button Grid.Column="2" Content="编辑"
-                        Click="EditProviderButton_Click"
-                        MinWidth="64" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Button Click="AddModelButton_Click"
+                            Width="34" Height="34" Padding="0"
+                            ToolTipService.ToolTip="添加模型">
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE710;" FontSize="14"/>
+                    </Button>
+                    <Button Click="EditProviderButton_Click"
+                            Width="34" Height="34" Padding="0"
+                            ToolTipService.ToolTip="编辑供应商">
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE70F;" FontSize="14"/>
+                    </Button>
+                    <Button Click="DeleteProviderButton_Click"
+                            Width="34" Height="34" Padding="0"
+                            ToolTipService.ToolTip="删除供应商">
+                        <FontIcon FontFamily="Segoe MDL2 Assets"
+                                  Glyph="&#xE74D;" FontSize="14"
+                                  Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Expander.Header>
 
@@ -86,68 +113,97 @@
                       ScrollViewer.VerticalScrollBarVisibility="Disabled">
                 <GridView.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <ItemsWrapGrid Orientation="Horizontal" ItemWidth="278"/>
+                        <ItemsWrapGrid Orientation="Horizontal" ItemWidth="260"/>
                     </ItemsPanelTemplate>
                 </GridView.ItemsPanel>
                 <GridView.ItemContainerStyle>
                     <Style TargetType="GridViewItem">
                         <Setter Property="Padding" Value="0"/>
-                        <Setter Property="Margin" Value="0,0,10,10"/>
+                        <Setter Property="Margin" Value="0,0,8,8"/>
                     </Style>
                 </GridView.ItemContainerStyle>
                 <GridView.ItemTemplate>
                     <DataTemplate>
-                        <Border Width="264" Padding="14,12" CornerRadius="10"
+                        <Border Width="248" Padding="14,12" CornerRadius="8"
                                 BorderThickness="1"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                            <StackPanel Spacing="8">
+                            <Grid RowSpacing="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Title + Actions -->
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Center" Spacing="2">
-                                        <TextBlock FontSize="14" FontWeight="SemiBold"
+                                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                                        <TextBlock FontSize="13" FontWeight="SemiBold"
                                                    Text="{Binding Title}"
                                                    TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock FontSize="11" Opacity="0.5"
+                                        <TextBlock FontSize="11" Opacity="0.45"
+                                                   FontFamily="Cascadia Mono"
                                                    Text="{Binding IdText}"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
-                                    <Button Grid.Column="1" Tag="{Binding}"
-                                            Click="EditModelButton_Click"
-                                            Width="30" Height="30" Padding="0"
-                                            VerticalAlignment="Top">
-                                        <FontIcon FontFamily="Segoe MDL2 Assets"
-                                                  Glyph="&#xE70F;" FontSize="12"/>
-                                    </Button>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                Spacing="2" VerticalAlignment="Top">
+                                        <Button Tag="{Binding}"
+                                                Click="EditModelButton_Click"
+                                                Width="28" Height="28" Padding="0"
+                                                Background="Transparent" BorderThickness="0">
+                                            <FontIcon FontFamily="Segoe MDL2 Assets"
+                                                      Glyph="&#xE70F;" FontSize="11"/>
+                                        </Button>
+                                        <Button Tag="{Binding}"
+                                                Click="DeleteModelButton_Click"
+                                                Width="28" Height="28" Padding="0"
+                                                Background="Transparent" BorderThickness="0">
+                                            <FontIcon FontFamily="Segoe MDL2 Assets"
+                                                      Glyph="&#xE74D;" FontSize="11"
+                                                      Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                        </Button>
+                                    </StackPanel>
                                 </Grid>
 
-                                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+                                <!-- Specs -->
+                                <Grid Grid.Row="1" ColumnSpacing="6" RowSpacing="3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock FontSize="10" Opacity="0.4" Text="Input" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Opacity="0.7" Text="{Binding InputText}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Row="1" FontSize="10" Opacity="0.4" Text="Context" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" FontSize="11" Opacity="0.7" Text="{Binding ContextText}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Row="2" FontSize="10" Opacity="0.4" Text="Tokens" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" FontSize="11" Opacity="0.7" Text="{Binding MaxTokensText}" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
 
-                                <StackPanel Spacing="4">
-                                    <TextBlock FontSize="11" Opacity="0.7" Text="{Binding InputText}"/>
-                                    <TextBlock FontSize="11" Opacity="0.7" Text="{Binding ContextText}"/>
-                                    <TextBlock FontSize="11" Opacity="0.7" Text="{Binding MaxTokensText}"/>
-                                </StackPanel>
-
-                                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
-
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Border CornerRadius="4" Padding="5,2"
-                                            Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                        <TextBlock FontSize="10" Opacity="0.7"
+                                <!-- Tags -->
+                                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="5">
+                                    <Border CornerRadius="10" Padding="7,2"
+                                            Background="{ThemeResource SubtleFillColorTertiaryBrush}">
+                                        <TextBlock FontSize="10" Opacity="0.65"
                                                    Text="{Binding ReasoningText}"/>
                                     </Border>
-                                    <Border CornerRadius="4" Padding="5,2" MaxWidth="160"
-                                            Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                        <TextBlock FontSize="10" Opacity="0.7"
+                                    <Border CornerRadius="10" Padding="7,2" MaxWidth="140"
+                                            Background="{ThemeResource SubtleFillColorTertiaryBrush}">
+                                        <TextBlock FontSize="10" Opacity="0.65"
                                                    Text="{Binding CostText}"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </Border>
                                 </StackPanel>
-                            </StackPanel>
+                            </Grid>
                         </Border>
                     </DataTemplate>
                 </GridView.ItemTemplate>

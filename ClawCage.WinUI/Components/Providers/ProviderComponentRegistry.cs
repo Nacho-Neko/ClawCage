@@ -38,5 +38,8 @@ namespace ClawCage.WinUI.Components.Providers
 
         internal static IReadOnlyList<IProviderWizardComponent> GetAll()
             => Components.Values.ToList();
+
+        internal static bool TryGet(string key, out IProviderWizardComponent? component)
+            => Components.TryGetValue(key, out component);
     }
 }

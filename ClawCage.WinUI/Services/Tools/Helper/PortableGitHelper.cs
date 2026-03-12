@@ -1,6 +1,7 @@
-using System.Diagnostics;
-using System.IO;
+using CliWrap;
+using CliWrap.Buffered;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace ClawCage.WinUI.Services.Tools.Helper
@@ -36,24 +37,18 @@ namespace ClawCage.WinUI.Services.Tools.Helper
             return File.Exists(binExe) ? binExe : null;
         }
 
-        internal static Task<DetectResult> DetectAtPathAsync(string gitExePath) => Task.Run(() =>
+        internal static Task<DetectResult> DetectAtPathAsync(string gitExePath) => Task.Run(async () =>
         {
             try
             {
-                var psi = new ProcessStartInfo(gitExePath, "--version")
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
+                var result = await WarpcliHelper.CreateConfiguredCliCommand(gitExePath)
+                    .WithArguments("--version")
+                    .WithValidation(CommandResultValidation.None)
+                    .ExecuteBufferedAsync();
 
-                using var process = Process.Start(psi)!;
-                var output = process.StandardOutput.ReadToEnd().Trim();
-                process.WaitForExit(5000);
-
-                return new DetectResult(process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output),
-                    string.IsNullOrWhiteSpace(output) ? null : output);
+                var output = result.StandardOutput.Trim();
+                return new DetectResult(result.ExitCode == 0 && !string.IsNullOrWhiteSpace(output),
+                     string.IsNullOrWhiteSpace(output) ? null : output);
             }
             catch
             {
@@ -61,106 +56,99 @@ namespace ClawCage.WinUI.Services.Tools.Helper
             }
         });
 
-        internal static async Task<ConfigureResult> ConfigureDefaultIdentityAsync(string databasePath, string userName, string userEmail)
+        internal static async Task<ConfigureResult> ConfigureDefaultIdentityAsync(string gitExePath, string userName, string userEmail)
         {
-            var gitExePath = FindLocalGitExe(databasePath);
-            if (string.IsNullOrWhiteSpace(gitExePath))
-                return new ConfigureResult(false, -1, "未找到 portablegit 的 git.exe。");
+            var portableGitRoot = GetPortableGitRootFromGitExe(gitExePath);
+            if (portableGitRoot is null)
+                return new ConfigureResult(false, -1, "无法从 git.exe 路径解析 portablegit 根目录。");
 
-            if (string.IsNullOrWhiteSpace(userName))
-                return new ConfigureResult(false, -1, "user.name 不能为空。");
+            var configPath = Path.Combine(portableGitRoot, ".gitconfig");
 
-            if (string.IsNullOrWhiteSpace(userEmail))
-                return new ConfigureResult(false, -1, "user.email 不能为空。");
 
-            var currentName = await GetGitConfigValueAsync(gitExePath, databasePath, "user.name");
-            if (!string.Equals(currentName, userName, StringComparison.Ordinal))
-            {
-                var setNameResult = await RunGitConfigAsync(gitExePath, databasePath, "user.name", userName);
-                if (!setNameResult.Success)
-                    return setNameResult;
-            }
+            if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(userEmail))
+                return new ConfigureResult(false, -1, "user.name 和 user.email 不能为空。");
 
-            var currentEmail = await GetGitConfigValueAsync(gitExePath, databasePath, "user.email");
-            if (!string.Equals(currentEmail, userEmail, StringComparison.Ordinal))
-                return await RunGitConfigAsync(gitExePath, databasePath, "user.email", userEmail);
+            // command mode:
+            // git config user.name "..."
+            // git config user.email "..."
+            var setNameResult = await ExecuteGitCommandAsync(gitExePath, new[] { "config", "--file", configPath, "--replace-all", "user.name", userName });
+            if (!setNameResult.Success)
+                return setNameResult;
+
+            var setEmailResult = await ExecuteGitCommandAsync(gitExePath, new[] { "config", "--file", configPath, "--replace-all", "user.email", userEmail });
+            if (!setEmailResult.Success)
+                return setEmailResult;
 
             return new ConfigureResult(true, 0, null);
         }
 
-        private static async Task<string?> GetGitConfigValueAsync(string gitExePath, string databasePath, string key)
+        internal static async Task<ConfigureResult> ConfigureGithubUrlReplacementAsync(string gitExePath)
         {
-            try
-            {
-                var portableGitHome = GetPortableGitDirectory(databasePath);
-                Directory.CreateDirectory(portableGitHome);
-                var gitConfigPath = GetPortableGitConfigPath(databasePath);
+            var portableGitRoot = GetPortableGitRootFromGitExe(gitExePath);
+            if (portableGitRoot is null)
+                return new ConfigureResult(false, -1, "无法从 git.exe 路径解析 portablegit 根目录。");
 
-                var psi = new ProcessStartInfo(gitExePath)
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
+            var configPath = Path.Combine(portableGitRoot, ".gitconfig");
 
-                psi.ArgumentList.Add("config");
-                psi.ArgumentList.Add("--file");
-                psi.ArgumentList.Add(gitConfigPath);
-                psi.ArgumentList.Add("--get");
-                psi.ArgumentList.Add(key);
+            // 清理旧值（不存在时忽略结果）
+            _ = await ExecuteGitCommandAsync(gitExePath, new[] { "config", "--file", configPath, "--unset-all", "url.https://github.com/.insteadOf" });
 
-                using var process = Process.Start(psi)!;
-                var stdout = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
+            // Config 1: url."https://github.com/".insteadOf "ssh://git@github.com/"
+            var res1 = await ExecuteGitCommandAsync(gitExePath, new[] { "config", "--file", configPath, "--add", "url.https://github.com/.insteadOf", "ssh://git@github.com/" });
+            if (!res1.Success) return res1;
 
-                if (process.ExitCode != 0)
-                    return null;
+            // Config 2: url."https://github.com/".insteadOf "git@github.com:"
+            var res2 = await ExecuteGitCommandAsync(gitExePath, new[] { "config", "--file", configPath, "--add", "url.https://github.com/.insteadOf", "git@github.com:" });
+            if (!res2.Success) return res2;
 
-                var value = stdout.Trim();
-                return string.IsNullOrWhiteSpace(value) ? null : value;
-            }
-            catch
-            {
-                return null;
-            }
+            return new ConfigureResult(true, 0, null);
         }
 
-        private static async Task<ConfigureResult> RunGitConfigAsync(string gitExePath, string databasePath, string key, string value)
+        internal static async Task<ConfigureResult> ConfigureDisableCertificateCheckAsync(string gitExePath)
+        {
+            var portableGitRoot = GetPortableGitRootFromGitExe(gitExePath);
+            if (portableGitRoot is null)
+                return new ConfigureResult(false, -1, "无法从 git.exe 路径解析 portablegit 根目录。");
+
+            var configPath = Path.Combine(portableGitRoot, ".gitconfig");
+
+            // 等价于：git config http.sslVerify false
+            return await ExecuteGitCommandAsync(gitExePath, new[]
+            {
+                "config", "--file", configPath, "--replace-all", "http.sslVerify", "false"
+            });
+        }
+
+        private static async Task<ConfigureResult> ExecuteGitCommandAsync(string gitExePath, string[] args)
         {
             try
             {
-                var portableGitHome = GetPortableGitDirectory(databasePath);
-                Directory.CreateDirectory(portableGitHome);
-                var gitConfigPath = GetPortableGitConfigPath(databasePath);
+                var result = await WarpcliHelper.CreateConfiguredCliCommand(gitExePath)
+                    .WithArguments(args)
+                    .WithValidation(CommandResultValidation.None)
+                    .ExecuteBufferedAsync();
 
-                var psi = new ProcessStartInfo(gitExePath)
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                psi.ArgumentList.Add("config");
-                psi.ArgumentList.Add("--file");
-                psi.ArgumentList.Add(gitConfigPath);
-                psi.ArgumentList.Add("--replace-all");
-                psi.ArgumentList.Add(key);
-                psi.ArgumentList.Add(value);
-
-                using var process = Process.Start(psi)!;
-                var stderr = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-
-                return process.ExitCode == 0
-                    ? new ConfigureResult(true, process.ExitCode, null)
-                    : new ConfigureResult(false, process.ExitCode, string.IsNullOrWhiteSpace(stderr) ? "设置 Git 配置失败。" : stderr.Trim());
+                return result.ExitCode == 0
+                    ? new ConfigureResult(true, result.ExitCode, null)
+                    : new ConfigureResult(false, result.ExitCode, string.IsNullOrWhiteSpace(result.StandardError) ? "执行 Git 命令失败。" : result.StandardError.Trim());
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return new ConfigureResult(false, -1, ex.Message);
             }
+        }
+
+        private static string? GetPortableGitRootFromGitExe(string gitExePath)
+        {
+            if (string.IsNullOrWhiteSpace(gitExePath))
+                return null;
+
+            var gitDir = Path.GetDirectoryName(gitExePath);
+            if (string.IsNullOrWhiteSpace(gitDir))
+                return null;
+
+            var parent = Path.GetDirectoryName(gitDir);
+            return string.IsNullOrWhiteSpace(parent) ? null : parent;
         }
     }
 }

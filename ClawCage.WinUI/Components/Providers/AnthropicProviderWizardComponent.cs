@@ -8,6 +8,7 @@ namespace ClawCage.WinUI.Components.Providers
         public string Key => "anthropic";
         public string Title => "Anthropic";
         public string Description => "Claude 官方";
+        public string? IconResourceName => "anthropic";
         public bool IsCustom => false;
         public string? DefaultBaseUrl => null;
         public string? DefaultApi => "anthropic-messages";

@@ -20,6 +20,7 @@ namespace ClawCage.WinUI.Components.Providers
         string Key { get; }
         string Title { get; }
         string Description { get; }
+        string? IconResourceName { get; }
         bool IsCustom { get; }
         string? DefaultBaseUrl { get; }
         string? DefaultApi { get; }

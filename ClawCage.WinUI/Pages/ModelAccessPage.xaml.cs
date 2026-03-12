@@ -1,9 +1,11 @@
-using ClawCage.WinUI.Components;
+using ClawCage.WinUI.Components.Providers;
 using ClawCage.WinUI.Model;
 using ClawCage.WinUI.Services.OpenClaw;
+using ClawCage.WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -58,6 +60,8 @@ namespace ClawCage.WinUI.Pages
             StatusText.Text = "读取中...";
 
             _configPath = OpenClawConfigService.GetConfigPath();
+            ProviderComponentRegistry.EnsureInitialized();
+
             var modelsConfigResult = await OpenClawConfigService.LoadModelsConfigAsync();
             if (modelsConfigResult is null)
             {
@@ -90,12 +94,12 @@ namespace ClawCage.WinUI.Pages
             }
         }
 
-        private async void AddModelButton_Click(object sender, RoutedEventArgs e)
+        private async void AddProviderButton_Click(object sender, RoutedEventArgs e)
         {
-            await AddModelWorkflowAsync();
+            await AddProviderWorkflowAsync();
         }
 
-        private async Task AddModelWorkflowAsync()
+        private async Task AddProviderWorkflowAsync()
         {
             if (_modelsConfig is null)
                 await LoadModelsAsync();
@@ -103,25 +107,65 @@ namespace ClawCage.WinUI.Pages
             if (_modelsConfig is null)
                 return;
 
-            var applyResult = await AddModelProviderComponent.ShowAndApplyAsync(XamlRoot, _modelsConfig);
-            if (!string.IsNullOrWhiteSpace(applyResult.ErrorMessage))
+            var vm = new AddModelProviderViewModel(XamlRoot, _modelsConfig);
+            await vm.AddProviderCommand.ExecuteAsync(null);
+
+            if (!string.IsNullOrWhiteSpace(vm.StatusMessage) && !vm.Succeeded)
             {
-                StatusText.Text = applyResult.ErrorMessage;
+                StatusText.Text = vm.StatusMessage;
                 return;
             }
 
-            if (!applyResult.Applied)
+            if (!vm.Succeeded)
                 return;
 
             if (!await SaveModelsConfigAsync())
                 return;
 
             await LoadModelsAsync();
-            StatusText.Text = applyResult.SuccessMessage ?? "已完成添加模型。";
+            StatusText.Text = vm.StatusMessage;
+        }
+
+        private async void ProviderCard_AddModelRequested(object sender, object? e)
+        {
+            if (e is not ProviderViewItem providerItem)
+                return;
+
+            await AddModelToProviderWorkflowAsync(providerItem.Name);
+        }
+
+        private async Task AddModelToProviderWorkflowAsync(string providerKey)
+        {
+            if (_modelsConfig is null)
+                await LoadModelsAsync();
+
+            if (_modelsConfig is null)
+                return;
+
+            var vm = new AddModelProviderViewModel(XamlRoot, _modelsConfig);
+            await vm.AddModelToProviderCommand.ExecuteAsync(providerKey);
+
+            if (!string.IsNullOrWhiteSpace(vm.StatusMessage) && !vm.Succeeded)
+            {
+                StatusText.Text = vm.StatusMessage;
+                return;
+            }
+
+            if (!vm.Succeeded)
+                return;
+
+            if (!await SaveModelsConfigAsync())
+                return;
+
+            await LoadModelsAsync();
+            StatusText.Text = vm.StatusMessage;
         }
 
         private ProviderViewItem BuildProviderViewItem(string providerKey, Provider provider)
         {
+            ProviderComponentRegistry.TryGet(providerKey, out var component);
+            var iconName = component?.IconResourceName;
+
             return new ProviderViewItem
             {
                 Name = providerKey,
@@ -133,7 +177,8 @@ namespace ClawCage.WinUI.Pages
                 SourceProvider = provider,
                 Models = (provider.Models ?? [])
                     .Select(m => BuildModelViewItem(providerKey, m))
-                    .ToList()
+                    .ToList(),
+                IconUrl = !string.IsNullOrEmpty(iconName) ? $"ms-appx:///Asset/Providers/{iconName}.png" : null
             };
         }
 
@@ -153,12 +198,59 @@ namespace ClawCage.WinUI.Pages
             };
         }
 
-        private async void EditProviderButton_Click(object sender, RoutedEventArgs e)
+        private async void ProviderCard_DeleteProviderRequested(object sender, object? e)
         {
-            if (sender is not Button { Tag: ProviderViewItem providerItem })
+            if (e is not ProviderViewItem providerItem)
                 return;
 
-            await EditProviderAsync(providerItem);
+            var dialog = new ContentDialog
+            {
+                Title = "确认删除",
+                Content = $"确认删除供应商「{providerItem.Name}」及其所有模型？此操作不可撤销。",
+                PrimaryButtonText = "删除",
+                CloseButtonText = "取消",
+                DefaultButton = ContentDialogButton.None,
+                XamlRoot = XamlRoot
+            };
+
+            if (await ShowDialogAsync(dialog) != ContentDialogResult.Primary)
+                return;
+
+            _modelsConfig?.Providers?.Remove(providerItem.Name);
+
+            if (!await SaveModelsConfigAsync())
+                return;
+
+            await LoadModelsAsync();
+            StatusText.Text = $"已删除供应商「{providerItem.Name}」。";
+        }
+
+        private async void ProviderCard_DeleteModelRequested(object sender, object? e)
+        {
+            if (e is not ModelViewItem modelItem || modelItem.SourceModel is null)
+                return;
+
+            var dialog = new ContentDialog
+            {
+                Title = "确认删除",
+                Content = $"确认删除模型「{modelItem.Title}」？此操作不可撤销。",
+                PrimaryButtonText = "删除",
+                CloseButtonText = "取消",
+                DefaultButton = ContentDialogButton.None,
+                XamlRoot = XamlRoot
+            };
+
+            if (await ShowDialogAsync(dialog) != ContentDialogResult.Primary)
+                return;
+
+            if (_modelsConfig?.Providers?.TryGetValue(modelItem.ProviderKey, out var provider) == true)
+                provider?.Models?.Remove(modelItem.SourceModel);
+
+            if (!await SaveModelsConfigAsync())
+                return;
+
+            await LoadModelsAsync();
+            StatusText.Text = $"已删除模型「{modelItem.Title}」。";
         }
 
         private async void ProviderCard_EditProviderRequested(object sender, object? e)
@@ -209,14 +301,6 @@ namespace ClawCage.WinUI.Pages
                 return;
 
             await LoadModelsAsync();
-        }
-
-        private async void EditModelButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is not Button { Tag: ModelViewItem modelItem })
-                return;
-
-            await EditModelAsync(modelItem);
         }
 
         private async void ProviderCard_EditModelRequested(object sender, object? e)
@@ -393,6 +477,7 @@ namespace ClawCage.WinUI.Pages
             public string ApiKeyMasked { get; set; } = string.Empty;
             public Provider? SourceProvider { get; set; }
             public List<ModelViewItem> Models { get; set; } = [];
+            public string? IconUrl { get; set; }
         }
 
         public sealed class ModelViewItem
