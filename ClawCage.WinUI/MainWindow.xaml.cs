@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Threading.Tasks;
 using Velopack;
+using Velopack.Exceptions;
 using Windows.Graphics;
 
 namespace ClawCage.WinUI
@@ -120,6 +121,10 @@ namespace ClawCage.WinUI
                         mgr.ApplyUpdatesAndRestart(newVersionInfo);
                     }
                 }
+            }
+            catch (NotInstalledException ex)
+            {
+                return; // 没有安装更新组件，跳过检查更新
             }
             catch (Exception ex)
             {
