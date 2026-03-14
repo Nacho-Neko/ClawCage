@@ -41,7 +41,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button MinWidth="120" Height="42" Content="控制台" Command="{x:Bind ViewModel.OpenConsoleCommand}" Visibility="{x:Bind ViewModel.OpenConsoleVisibility, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.OpenConsoleEnabled, Mode=OneWay}"/>
+                <Button MinWidth="120" Height="42" Content="控制台" Command="{x:Bind ViewModel.OpenConsoleCommand}" Visibility="{x:Bind ViewModel.OpenConsoleVisibility, Mode=OneWay}"/>
                 <Button MinWidth="100" Height="42" Content="重启" Command="{x:Bind ViewModel.RestartCommand}" Visibility="{x:Bind ViewModel.RestartButtonVisibility, Mode=OneWay}"/>
             </StackPanel>
         </StackPanel>

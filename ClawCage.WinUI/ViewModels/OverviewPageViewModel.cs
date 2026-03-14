@@ -33,7 +33,7 @@ namespace ClawCage.WinUI.ViewModels
         [ObservableProperty] private Visibility _actionButtonsVisibility = Visibility.Visible;
         [ObservableProperty] private Visibility _restartButtonVisibility = Visibility.Collapsed;
         [ObservableProperty] private Visibility _openConsoleVisibility = Visibility.Collapsed;
-        [ObservableProperty] private bool _openConsoleEnabled;
+        [ObservableProperty] private bool _openConsoleEnabled = false;
         [ObservableProperty] private bool _isHelpEnabled = true;
 
         internal void Initialize(XamlRoot xamlRoot) => _xamlRoot = xamlRoot;
