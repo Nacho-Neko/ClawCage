@@ -1,7 +1,9 @@
 using ClawCage.WinUI.Model;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -17,6 +19,7 @@ namespace ClawCage.WinUI.Services.OpenClaw
         private readonly object _syncRoot = new();
         private FileSystemWatcher? _watcher;
         private Timer? _debounceTimer;
+        private volatile bool _isSelfWriting;
 
         internal event EventHandler? ConfigChanged;
 
@@ -45,15 +48,43 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return JsonNode.Parse(json) as JsonObject;
         }
 
+        private static readonly JsonSerializerOptions WriteOptions = new()
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
         internal async Task<bool> SaveRootAsync(JsonObject root)
         {
             var path = GetConfigPath();
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-            var json = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(path, json);
-            RaiseConfigChanged();
+            var json = root.ToJsonString(WriteOptions);
+
+            _isSelfWriting = true;
+            try
+            {
+                await File.WriteAllTextAsync(path, json);
+            }
+            finally
+            {
+                // Delay reset so the FileSystemWatcher event (which fires asynchronously) is still suppressed
+                _ = Task.Delay(300).ContinueWith(_ => _isSelfWriting = false);
+            }
+
             return true;
+        }
+
+        /// <summary>
+        /// Re-reads the config file, sets <paramref name="key"/> to <paramref name="value"/>,
+        /// then writes the merged result. This prevents overwriting unrelated sections
+        /// when the caller holds a stale root.
+        /// </summary>
+        private async Task<bool> MergeAndSaveAsync(string key, JsonNode? value)
+        {
+            var root = await LoadRootAsync() ?? new JsonObject();
+            root[key] = value;
+            return await SaveRootAsync(root);
         }
 
         internal async Task<string?> TryGetConsoleUrlAsync()
@@ -92,29 +123,39 @@ namespace ClawCage.WinUI.Services.OpenClaw
         {
             models.Mode = string.IsNullOrWhiteSpace(models.Mode) ? "merge" : models.Mode;
             models.Providers ??= [];
-            root["models"] = JsonSerializer.SerializeToNode(models);
-            return SaveRootAsync(root);
+            return MergeAndSaveAsync("models", JsonSerializer.SerializeToNode(models, WriteOptions));
         }
 
-        internal async Task<(JsonObject Root, Integrations Integrations)?> LoadIntegrationConfigAsync()
+        internal async Task<(JsonObject Root, Dictionary<string, ChannelEntry> Channels)?> LoadChannelsConfigAsync()
         {
             var root = await LoadRootAsync();
             if (root is null)
                 return null;
 
-            var integrationsNode = root["integrations"];
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var integrations = integrationsNode?.Deserialize<Integrations>(options) ?? new Integrations();
-            integrations.Providers ??= [];
+            var channels = new Dictionary<string, ChannelEntry>(StringComparer.OrdinalIgnoreCase);
 
-            return (root, integrations);
+            if (root["channels"] is JsonObject channelsObj)
+            {
+                foreach (var prop in channelsObj)
+                {
+                    var data = prop.Value is JsonObject dataObj
+                        ? JsonNode.Parse(dataObj.ToJsonString()) as JsonObject ?? []
+                        : [];
+                    channels[prop.Key] = new ChannelEntry { Key = prop.Key, Data = data };
+                }
+            }
+
+            return (root, channels);
         }
 
-        internal Task<bool> SaveIntegrationConfigAsync(JsonObject root, Integrations integrations)
+        internal Task<bool> SaveChannelsConfigAsync(JsonObject root, Dictionary<string, ChannelEntry> channels)
         {
-            integrations.Providers ??= [];
-            root["integrations"] = JsonSerializer.SerializeToNode(integrations);
-            return SaveRootAsync(root);
+            var channelsObj = new JsonObject();
+            foreach (var entry in channels.Values)
+            {
+                channelsObj[entry.Key] = JsonNode.Parse(entry.Data.ToJsonString(WriteOptions));
+            }
+            return MergeAndSaveAsync("channels", channelsObj);
         }
 
         internal async Task<(JsonObject Root, PluginsConfig Plugins)?> LoadPluginsConfigAsync()
@@ -134,8 +175,7 @@ namespace ClawCage.WinUI.Services.OpenClaw
         internal Task<bool> SavePluginsConfigAsync(JsonObject root, PluginsConfig plugins)
         {
             plugins.Allow ??= [];
-            root["plugins"] = JsonSerializer.SerializeToNode(plugins);
-            return SaveRootAsync(root);
+            return MergeAndSaveAsync("plugins", JsonSerializer.SerializeToNode(plugins, WriteOptions));
         }
 
         private static bool TryGetGatewayPort(JsonObject root, out int port) // pure helper – keep static
@@ -227,6 +267,9 @@ namespace ClawCage.WinUI.Services.OpenClaw
 
         private void OnWatcherEvent(object sender, FileSystemEventArgs e)
         {
+            if (_isSelfWriting)
+                return;
+
             lock (_syncRoot)
             {
                 _debounceTimer ??= new Timer(_ => RaiseConfigChanged());

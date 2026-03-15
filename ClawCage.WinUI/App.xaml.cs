@@ -27,7 +27,7 @@ namespace ClawCage.WinUI
                     // ViewModels
                     services.AddTransient(sp =>
                         new OverviewPageViewModel(sp.GetRequiredService<OpenClawConfigService>()));
- 
+
                 })
                 .Build();
 
