@@ -37,6 +37,9 @@
 	  <Content Include="Asset\Providers\**\*.png">
 		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
+	  <Content Include="Asset\Integration\**\*.png">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 	
 </Project>
