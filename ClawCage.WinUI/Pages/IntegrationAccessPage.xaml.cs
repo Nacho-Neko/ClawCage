@@ -22,10 +22,8 @@ namespace ClawCage.WinUI.Pages
         public ObservableCollection<IntegrationViewItem> IntegrationItems { get; } = [];
 
         private JsonObject? _rootConfigNode;
-        private Integrations? _integrationConfig;
-        private JsonObject? _pluginsRootNode;
+        private Dictionary<string, ChannelEntry>? _channelsConfig;
         private PluginsConfig? _pluginsConfig;
-        private string? _configPath;
         private bool _suppressToggleEvents;
 
         public IntegrationAccessPage()
@@ -63,7 +61,6 @@ namespace ClawCage.WinUI.Pages
             IntegrationItems.Clear();
             StatusText.Text = "读取中...";
 
-            _configPath = _configService.GetConfigPath();
             IntegrationComponentRegistry.EnsureInitialized();
 
             // Fetch installed plugins from singleton cache
@@ -73,53 +70,45 @@ namespace ClawCage.WinUI.Pages
             var pluginsConfigResult = await _configService.LoadPluginsConfigAsync();
             if (pluginsConfigResult is not null)
             {
-                _pluginsRootNode = pluginsConfigResult.Value.Root;
                 _pluginsConfig = pluginsConfigResult.Value.Plugins;
             }
             else
             {
-                _pluginsRootNode = null;
                 _pluginsConfig = new PluginsConfig { Enabled = false, Allow = [] };
             }
-
-            var allowSet = new HashSet<string>(_pluginsConfig.Allow ?? [], StringComparer.OrdinalIgnoreCase);
 
             // Collect keys already present in config so we don't duplicate
             var configKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var integrationConfigResult = await _configService.LoadIntegrationConfigAsync();
-            if (integrationConfigResult is not null)
+            var channelsResult = await _configService.LoadChannelsConfigAsync();
+            if (channelsResult is not null)
             {
-                _rootConfigNode = integrationConfigResult.Value.Root;
-                _integrationConfig = integrationConfigResult.Value.Integrations;
+                _rootConfigNode = channelsResult.Value.Root;
+                _channelsConfig = channelsResult.Value.Channels;
             }
 
             try
             {
-                // 1. Show config-based integrations
-                if (_integrationConfig?.Providers is not null)
+                // 1. Show config-based channels
+                if (_channelsConfig is not null)
                 {
-                    foreach (var entry in _integrationConfig.Providers)
+                    foreach (var channel in _channelsConfig.Values)
                     {
-                        var integration = entry.Value;
-                        if (integration is null)
-                            continue;
-
-                        configKeys.Add(entry.Key);
-                        IntegrationItems.Add(BuildIntegrationViewItem(entry.Key, integration, allowSet));
+                        configKeys.Add(channel.Key);
+                        IntegrationItems.Add(BuildChannelViewItem(channel));
                     }
                 }
 
                 // 2. Show installed plugins that match registered IIntegrationWizardComponent keys
                 foreach (var component in IntegrationComponentRegistry.GetAll())
                 {
-                    if (configKeys.Contains(component.Key))
+                    if (configKeys.Contains(component.ConfigKey))
                         continue;
 
                     if (!plugins.TryGetValue(component.Key, out var pluginInfo))
                         continue;
 
-                    IntegrationItems.Add(BuildPluginViewItem(component, pluginInfo, allowSet));
+                    IntegrationItems.Add(BuildPluginViewItem(component, pluginInfo));
                 }
 
                 StatusText.Text = $"已加载 {IntegrationItems.Count} 个接入。";
@@ -136,8 +125,7 @@ namespace ClawCage.WinUI.Pages
 
         private static IntegrationViewItem BuildPluginViewItem(
             IIntegrationWizardComponent component,
-            OpenClawPluginService.PluginInfo pluginInfo,
-            HashSet<string> allowSet)
+            OpenClawPluginService.PluginInfo pluginInfo)
         {
             var isLoaded = string.Equals(pluginInfo.Status, "loaded", StringComparison.OrdinalIgnoreCase);
             var statusColor = isLoaded
@@ -146,38 +134,38 @@ namespace ClawCage.WinUI.Pages
 
             return new IntegrationViewItem
             {
-                Key = component.Key,
+                Key = component.ConfigKey,
                 Name = component.Title,
                 VersionText = !string.IsNullOrWhiteSpace(pluginInfo.Version) ? pluginInfo.Version : "-",
                 DescriptionText = component.Description,
                 EnabledText = isLoaded ? "已加载" : pluginInfo.Status,
                 StatusColor = new Microsoft.UI.Xaml.Media.SolidColorBrush(statusColor),
-                SourceIntegration = null,
-                IsAllowed = allowSet.Contains(component.Key),
+                SourceChannelData = null,
+                IsAllowed = false,
                 IconUrl = !string.IsNullOrEmpty(component.IconResourceName)
                     ? $"ms-appx:///Asset/Integration/{component.IconResourceName}.png"
                     : null
             };
         }
 
-        private static IntegrationViewItem BuildIntegrationViewItem(string integrationKey, Integration integration, HashSet<string> allowSet)
+        private static IntegrationViewItem BuildChannelViewItem(ChannelEntry channel)
         {
-            IntegrationComponentRegistry.TryGet(integrationKey, out var component);
+            IntegrationComponentRegistry.TryGet(channel.Key, out var component);
 
-            var statusColor = integration.Enabled
+            var statusColor = channel.Enabled
                 ? Windows.UI.Color.FromArgb(255, 34, 177, 76)
                 : Windows.UI.Color.FromArgb(255, 244, 67, 54);
 
             return new IntegrationViewItem
             {
-                Key = integrationKey,
-                Name = component?.Title ?? integration.Name ?? integrationKey,
+                Key = channel.Key,
+                Name = component?.Title ?? channel.Key,
                 VersionText = "-",
-                DescriptionText = integration.Description ?? string.Empty,
-                EnabledText = integration.Enabled ? "启用" : "禁用",
+                DescriptionText = component?.Description ?? string.Empty,
+                EnabledText = channel.Enabled ? "启用" : "禁用",
                 StatusColor = new Microsoft.UI.Xaml.Media.SolidColorBrush(statusColor),
-                SourceIntegration = integration,
-                IsAllowed = allowSet.Contains(integrationKey),
+                SourceChannelData = channel.Data,
+                IsAllowed = channel.Enabled,
                 IconUrl = component is not null && !string.IsNullOrEmpty(component.IconResourceName)
                     ? $"ms-appx:///Asset/Integration/{component.IconResourceName}.png"
                     : null
@@ -190,30 +178,29 @@ namespace ClawCage.WinUI.Pages
             if (result is null)
                 return;
 
-            if (_integrationConfig is null)
-                await LoadIntegrationsAsync();
-
-            if (_integrationConfig is null)
+            // Look up the component to get the npm package name
+            if (!IntegrationComponentRegistry.TryGet(result.IntegrationKey, out var component) || component is null)
                 return;
 
-            var newIntegration = new Integration
+            StatusText.Text = $"正在安装插件「{component.Title}」，请在弹出的终端中查看进度…";
+            var installResult = await _pluginService.InstallPluginAsync(component.NpmPackageName);
+            if (!installResult.Success)
             {
-                Name = result.Name,
-                Type = result.Type,
-                Description = result.Description,
-                Enabled = result.Enabled,
-                Config = result.Config
-            };
-
-            var key = result.IntegrationKey.ToLower();
-            _integrationConfig.Providers ??= new();
-            _integrationConfig.Providers[key] = newIntegration;
-
-            if (!await SaveIntegrationConfigAsync())
+                StatusText.Text = $"插件安装失败: {installResult.Error}";
                 return;
+            }
 
+            // Add to plugins allow list
+            _pluginsConfig ??= new PluginsConfig { Enabled = true, Allow = [] };
+            _pluginsConfig.Allow ??= [];
+            if (!_pluginsConfig.Allow.Contains(component.Key, StringComparer.OrdinalIgnoreCase))
+                _pluginsConfig.Allow.Add(component.Key);
+            await SavePluginsConfigInternalAsync();
+
+            // Refresh plugin cache after install
+            await _pluginService.LoadAsync();
             await LoadIntegrationsAsync();
-            StatusText.Text = "接入已添加。";
+            StatusText.Text = $"插件「{component.Title}」已安装。";
         }
 
         private async void ConfigureButton_Click(object sender, RoutedEventArgs e)
@@ -243,32 +230,30 @@ namespace ClawCage.WinUI.Pages
 
         private async void CardToggle_Toggled(object sender, RoutedEventArgs e)
         {
-            if (_suppressToggleEvents || _pluginsConfig is null)
+            if (_suppressToggleEvents || _channelsConfig is null)
                 return;
 
             if (sender is not ToggleSwitch { Tag: IntegrationViewItem item })
                 return;
 
-            _pluginsConfig.Allow ??= [];
+            var isOn = ((ToggleSwitch)sender).IsOn;
 
-            if (item.IsAllowed && !_pluginsConfig.Allow.Contains(item.Key, StringComparer.OrdinalIgnoreCase))
+            if (!_channelsConfig.TryGetValue(item.Key, out var channelEntry))
             {
-                // Was toggled ON but somehow not in list — skip to avoid duplicate
-            }
-
-            if (((ToggleSwitch)sender).IsOn)
-            {
-                if (!_pluginsConfig.Allow.Contains(item.Key, StringComparer.OrdinalIgnoreCase))
-                    _pluginsConfig.Allow.Add(item.Key);
-                item.IsAllowed = true;
+                IntegrationComponentRegistry.TryGet(item.Key, out var component);
+                var defaultData = component is not null
+                    ? ChannelConfigDialog.BuildDefaultData(component)
+                    : new JsonObject();
+                channelEntry = new ChannelEntry { Key = item.Key, Data = defaultData, Enabled = isOn };
+                _channelsConfig[item.Key] = channelEntry;
             }
             else
             {
-                _pluginsConfig.Allow.RemoveAll(k => string.Equals(k, item.Key, StringComparison.OrdinalIgnoreCase));
-                item.IsAllowed = false;
+                channelEntry.Enabled = isOn;
             }
 
-            await SavePluginsConfigInternalAsync();
+            item.IsAllowed = isOn;
+            await SaveChannelsConfigAsync();
         }
 
         private async Task<bool> SavePluginsConfigInternalAsync()
@@ -293,71 +278,26 @@ namespace ClawCage.WinUI.Pages
 
         private async Task EditIntegrationAsync(IntegrationViewItem integrationItem)
         {
-            if (integrationItem.SourceIntegration is null)
+            if (!IntegrationComponentRegistry.TryGet(integrationItem.Key, out var component) || component is null)
                 return;
 
-            var integration = integrationItem.SourceIntegration;
-            var nameBox = new TextBox { Text = integration.Name ?? string.Empty, Header = "名称", HorizontalAlignment = HorizontalAlignment.Stretch };
-            var descBox = new TextBox { Text = integration.Description ?? string.Empty, Header = "描述", AcceptsReturn = true, Height = 80, HorizontalAlignment = HorizontalAlignment.Stretch };
-            var enabledToggle = new ToggleSwitch { IsOn = integration.Enabled, Header = "启用此接入" };
+            ChannelEntry? channelEntry = null;
+            _channelsConfig?.TryGetValue(integrationItem.Key, out channelEntry);
 
-            var configPanel = new StackPanel { Spacing = 12 };
-            if (integration.Config != null && integration.Config.Count > 0)
-            {
-                configPanel.Children.Add(new TextBlock { Text = "配置信息", Style = Application.Current.Resources["BodyStrongTextBlockStyle"] as Style });
-                foreach (var kvp in integration.Config)
-                {
-                    var box = new TextBox
-                    {
-                        Header = kvp.Key,
-                        Text = kvp.Value?.ToString() ?? string.Empty,
-                        HorizontalAlignment = HorizontalAlignment.Stretch,
-                        Tag = kvp.Key
-                    };
-                    configPanel.Children.Add(box);
-                }
-            }
-
-            var content = new StackPanel { Spacing = 12 };
-            content.Children.Add(nameBox);
-            content.Children.Add(descBox);
-            content.Children.Add(enabledToggle);
-            content.Children.Add(configPanel);
-
-            var dialog = new ContentDialog
-            {
-                Title = $"编辑接入 - {integrationItem.Name}",
-                PrimaryButtonText = "保存",
-                CloseButtonText = "取消",
-                DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = XamlRoot,
-                Content = new ScrollViewer
-                {
-                    MaxHeight = 500,
-                    Content = content
-                }
-            };
-
-            var result = await ShowDialogAsync(dialog);
-            if (result != ContentDialogResult.Primary)
+            var editedData = await ChannelConfigDialog.ShowAsync(XamlRoot, component, channelEntry?.Data);
+            if (editedData is null)
                 return;
 
-            integration.Name = nameBox.Text.Trim();
-            integration.Description = descBox.Text.Trim();
-            integration.Enabled = enabledToggle.IsOn;
-
-            // 更新配置项
-            if (integration.Config != null)
+            if (channelEntry is not null)
             {
-                foreach (var child in configPanel.Children.OfType<TextBox>())
-                {
-                    var key = child.Tag as string;
-                    if (!string.IsNullOrEmpty(key))
-                        integration.Config[key] = child.Text;
-                }
+                channelEntry.Data = editedData;
+            }
+            else if (_channelsConfig is not null)
+            {
+                _channelsConfig[integrationItem.Key] = new ChannelEntry { Key = integrationItem.Key, Data = editedData };
             }
 
-            if (!await SaveIntegrationConfigAsync())
+            if (!await SaveChannelsConfigAsync())
                 return;
 
             await LoadIntegrationsAsync();
@@ -367,9 +307,9 @@ namespace ClawCage.WinUI.Pages
         {
             var dialog = new ContentDialog
             {
-                Title = "确认删除",
-                Content = $"确认删除接入「{integrationItem.Name}」？此操作不可撤销。",
-                PrimaryButtonText = "删除",
+                Title = "确认卸载",
+                Content = $"确认卸载接入「{integrationItem.Name}」？此操作不可撤销。",
+                PrimaryButtonText = "卸载",
                 CloseButtonText = "取消",
                 DefaultButton = ContentDialogButton.None,
                 XamlRoot = XamlRoot
@@ -378,23 +318,44 @@ namespace ClawCage.WinUI.Pages
             if (await ShowDialogAsync(dialog) != ContentDialogResult.Primary)
                 return;
 
-            _integrationConfig?.Providers?.Remove(integrationItem.Key);
+            // Uninstall plugin via CLI if it has a registered component
+            if (IntegrationComponentRegistry.TryGet(integrationItem.Key, out var component) && component is not null)
+            {
+                StatusText.Text = $"正在卸载插件「{integrationItem.Name}」，请在弹出的终端中查看进度…";
+                var uninstallResult = await _pluginService.UninstallPluginAsync(component.NpmPackageName);
+                if (!uninstallResult.Success)
+                {
+                    StatusText.Text = $"插件卸载失败: {uninstallResult.Error}";
+                    return;
+                }
+            }
 
-            if (!await SaveIntegrationConfigAsync())
+            _channelsConfig?.Remove(integrationItem.Key);
+
+            if (!await SaveChannelsConfigAsync())
                 return;
 
+            // Remove from plugins allow list
+            if (_pluginsConfig is not null && component is not null)
+            {
+                _pluginsConfig.Allow?.RemoveAll(k => string.Equals(k, component.Key, StringComparison.OrdinalIgnoreCase));
+                await SavePluginsConfigInternalAsync();
+            }
+
+            // Refresh plugin cache after uninstall
+            await _pluginService.LoadAsync();
             await LoadIntegrationsAsync();
-            StatusText.Text = $"已删除接入「{integrationItem.Name}」。";
+            StatusText.Text = $"已卸载接入「{integrationItem.Name}」。";
         }
 
-        private async Task<bool> SaveIntegrationConfigAsync()
+        private async Task<bool> SaveChannelsConfigAsync()
         {
-            if (_rootConfigNode is null || _integrationConfig is null)
+            if (_rootConfigNode is null || _channelsConfig is null)
                 return false;
 
             try
             {
-                await _configService.SaveIntegrationConfigAsync(_rootConfigNode, _integrationConfig);
+                await _configService.SaveChannelsConfigAsync(_rootConfigNode, _channelsConfig);
                 StatusText.Text = "保存成功。";
                 return true;
             }
@@ -437,7 +398,7 @@ namespace ClawCage.WinUI.Pages
             public string EnabledText { get; set; } = string.Empty;
             public bool IsAllowed { get; set; }
             public Microsoft.UI.Xaml.Media.SolidColorBrush StatusColor { get; set; }
-            public Integration? SourceIntegration { get; set; }
+            public JsonObject? SourceChannelData { get; set; }
             public string? IconUrl { get; set; }
             public bool HasIcon => !string.IsNullOrEmpty(IconUrl);
             public Microsoft.UI.Xaml.Media.Imaging.BitmapImage? IconSource =>

@@ -1,29 +1,29 @@
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
+using System.Text.Json.Nodes;
 
 namespace ClawCage.WinUI.Model
 {
-    public class Integrations
+    /// <summary>
+    /// Represents a single channel entry inside the <c>channels</c> array.
+    /// Each entry is a JSON object with a single key (e.g. "dingtalk") whose
+    /// value is a <see cref="JsonObject"/> with integration-specific settings.
+    /// </summary>
+    public sealed class ChannelEntry
     {
-        [JsonPropertyName("providers")]
-        public Dictionary<string, Integration> Providers { get; set; }
-    }
+        /// <summary>Integration key, e.g. "dingtalk", "lark".</summary>
+        public string Key { get; set; } = string.Empty;
 
-    public class Integration
-    {
-        [JsonPropertyName("name")]
-        public string Name { get; set; }
+        /// <summary>The raw JSON config for this channel (shape varies per integration).</summary>
+        public JsonObject Data { get; set; } = [];
 
-        [JsonPropertyName("type")]
-        public string Type { get; set; }
-
-        [JsonPropertyName("config")]
-        public Dictionary<string, object> Config { get; set; }
-
-        [JsonPropertyName("enabled")]
-        public bool Enabled { get; set; }
-
-        [JsonPropertyName("description")]
-        public string Description { get; set; }
+        /// <summary>
+        /// Convenience accessor for the common <c>enabled</c> field present in every channel.
+        /// Reads from / writes to <see cref="Data"/>.
+        /// </summary>
+        public bool Enabled
+        {
+            get => Data.TryGetPropertyValue("enabled", out var node)
+                && node is JsonValue v && v.TryGetValue<bool>(out var b) && b;
+            set => Data["enabled"] = value;
+        }
     }
 }

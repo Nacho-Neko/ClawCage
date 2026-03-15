@@ -11,6 +11,8 @@ namespace ClawCage.WinUI.Services.OpenClaw
 {
     internal sealed class OpenClawPluginService
     {
+        internal record PluginCommandResult(bool Success, int ExitCode, string Output, string Error);
+
         private Dictionary<string, PluginInfo> _plugins = new(StringComparer.OrdinalIgnoreCase);
 
         internal sealed class PluginInfo
@@ -67,6 +69,72 @@ namespace ClawCage.WinUI.Services.OpenClaw
             }
 
             return result;
+        }
+
+        internal async Task<PluginCommandResult> InstallPluginAsync(string npmPackageName, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(npmPackageName))
+                return new PluginCommandResult(false, -1, string.Empty, "包名不能为空。");
+
+            var databasePath = AppRuntimeState.DatabasePath;
+            var openClawCmd = Path.Combine(databasePath, "openclaw.cmd");
+            if (!File.Exists(openClawCmd))
+                return new PluginCommandResult(false, -1, string.Empty, $"未找到命令: {openClawCmd}");
+
+            try
+            {
+                var command = WarpcliHelper.CreateVisibleCommand("OpenClaw-Plugin-Install", openClawCmd, args =>
+                {
+                    args.Add("plugins");
+                    args.Add("install");
+                    args.Add(npmPackageName);
+                }, databasePath);
+
+                var result = await command.ExecuteBufferedAsync(ct);
+                return new PluginCommandResult(result.ExitCode == 0, result.ExitCode, result.StandardOutput.Trim(), result.StandardError.Trim());
+            }
+            catch (OperationCanceledException)
+            {
+                return new PluginCommandResult(false, -1, string.Empty, "安装已取消。");
+            }
+            catch (Exception ex)
+            {
+                return new PluginCommandResult(false, -1, string.Empty, ex.Message);
+            }
+        }
+
+        internal async Task<PluginCommandResult> UninstallPluginAsync(string npmPackageName, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(npmPackageName))
+                return new PluginCommandResult(false, -1, string.Empty, "包名不能为空。");
+
+            var databasePath = AppRuntimeState.DatabasePath;
+            var openClawCmd = Path.Combine(databasePath, "openclaw.cmd");
+            if (!File.Exists(openClawCmd))
+                return new PluginCommandResult(false, -1, string.Empty, $"未找到命令: {openClawCmd}");
+
+            try
+            {
+                var command = WarpcliHelper.CreateVisibleCommand("OpenClaw-Plugin-Uninstall", openClawCmd, args =>
+                {
+                    args.Add("plugins");
+                    args.Add("uninstall");
+                    args.Add(npmPackageName);
+                    args.Add("--force");
+
+                }, databasePath);
+
+                var result = await command.ExecuteBufferedAsync(ct);
+                return new PluginCommandResult(result.ExitCode == 0, result.ExitCode, result.StandardOutput.Trim(), result.StandardError.Trim());
+            }
+            catch (OperationCanceledException)
+            {
+                return new PluginCommandResult(false, -1, string.Empty, "卸载已取消。");
+            }
+            catch (Exception ex)
+            {
+                return new PluginCommandResult(false, -1, string.Empty, ex.Message);
+            }
         }
 
         private static void ParsePluginTable(string output, Dictionary<string, PluginInfo> result)

@@ -1,10 +1,8 @@
-using ClawCage.WinUI.Components;
 using ClawCage.WinUI.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.Foundation;
@@ -16,11 +14,6 @@ namespace ClawCage.WinUI.Components.Integrations
         internal sealed class IntegrationAddResult
         {
             public string IntegrationKey { get; set; } = string.Empty;
-            public string Name { get; set; } = string.Empty;
-            public string Type { get; set; } = string.Empty;
-            public string Description { get; set; } = string.Empty;
-            public bool Enabled { get; set; } = true;
-            public Dictionary<string, object> Config { get; set; } = new();
         }
 
         internal sealed class IntegrationTemplate
@@ -89,12 +82,7 @@ namespace ClawCage.WinUI.Components.Integrations
 
             return new IntegrationAddResult
             {
-                IntegrationKey = selected.Key,
-                Name = selected.Title,
-                Type = selected.Key,
-                Description = selected.Description,
-                Enabled = true,
-                Config = new()
+                IntegrationKey = selected.Key
             };
         }
 

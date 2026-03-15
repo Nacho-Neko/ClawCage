@@ -34,10 +34,12 @@ namespace ClawCage.WinUI.Components.Integrations
         internal static void Register(IIntegrationWizardComponent component)
         {
             Components[component.Key] = component;
+            if (!string.Equals(component.ConfigKey, component.Key, StringComparison.OrdinalIgnoreCase))
+                Components[component.ConfigKey] = component;
         }
 
         internal static IReadOnlyList<IIntegrationWizardComponent> GetAll()
-            => Components.Values.ToList();
+            => Components.Values.Distinct().ToList();
 
         internal static bool TryGet(string key, out IIntegrationWizardComponent? component)
             => Components.TryGetValue(key, out component);
