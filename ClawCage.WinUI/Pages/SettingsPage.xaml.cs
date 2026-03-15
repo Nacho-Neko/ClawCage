@@ -1,5 +1,5 @@
-using ClawCage.WinUI.Services;
 using ClawCage.WinUI.Model;
+using ClawCage.WinUI.Services;
 using ClawCage.WinUI.Services.OpenClaw;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.UI.Xaml;
@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Text.Json.Nodes;
+using System.Threading.Tasks;
 using Windows.Storage.Pickers;
 
 namespace ClawCage.WinUI.Pages
@@ -17,6 +18,7 @@ namespace ClawCage.WinUI.Pages
 
         private bool _isLoadingRuntimeSettings;
         private PluginsConfig? _pluginsConfig;
+        private bool _isUpdating;
 
         public SettingsPage()
         {
@@ -30,12 +32,11 @@ namespace ClawCage.WinUI.Pages
             _configService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
             _configService.ConfigChanged += OpenClawConfigService_ConfigChanged;
 
-            var path = AppRuntimeState.DatabasePath;
-            PathTextBox.Text = path;
-            PathPreview.Text = path;
+            PathPreview.Text = AppRuntimeState.DatabasePath;
             RefreshOpenClawConfigStatus();
             LoadRunModeSettings();
             await LoadPluginsEnabledAsync();
+            await RefreshVersionInfoAsync();
         }
 
         private void SettingsPage_Unloaded(object sender, RoutedEventArgs e)
@@ -48,6 +49,8 @@ namespace ClawCage.WinUI.Pages
             _ = DispatcherQueue.TryEnqueue(RefreshOpenClawConfigStatus);
         }
 
+        // ── OpenClaw config status ──
+
         private void RefreshOpenClawConfigStatus()
         {
             var configPath = _configService.GetConfigPath();
@@ -56,6 +59,8 @@ namespace ClawCage.WinUI.Pages
                 ? "状态：已生成（监听中）"
                 : "状态：未生成（监听中）";
         }
+
+        // ── Run mode ──
 
         private void LoadRunModeSettings()
         {
@@ -90,6 +95,7 @@ namespace ClawCage.WinUI.Pages
         private void ApplyNodeModeInputState()
         {
             var isNodeMode = RunModeSwitch.IsOn;
+            NodeArgsPanel.Visibility = isNodeMode ? Visibility.Visible : Visibility.Collapsed;
             HostTextBox.IsEnabled = isNodeMode;
             PortTextBox.IsEnabled = isNodeMode;
         }
@@ -126,6 +132,8 @@ namespace ClawCage.WinUI.Pages
             RunModeInfoBar.IsOpen = true;
         }
 
+        // ── Data path ──
+
         private async void ChangePath_Click(object sender, RoutedEventArgs e)
         {
             var picker = new FolderPicker();
@@ -138,13 +146,14 @@ namespace ClawCage.WinUI.Pages
             if (folder is not null)
             {
                 AppRuntimeState.SetDatabasePath(folder.Path);
-                PathTextBox.Text = folder.Path;
                 PathPreview.Text = folder.Path;
                 SavedInfoBar.IsOpen = true;
             }
         }
 
-        private async System.Threading.Tasks.Task LoadPluginsEnabledAsync()
+        // ── Plugins enabled ──
+
+        private async Task LoadPluginsEnabledAsync()
         {
             _isLoadingRuntimeSettings = true;
 
@@ -178,6 +187,95 @@ namespace ClawCage.WinUI.Pages
             {
                 // Silently handle save errors
             }
+        }
+
+        // ── Version info ──
+
+        private async Task RefreshVersionInfoAsync()
+        {
+            CurrentVersionText.Text = "获取中…";
+            LatestVersionText.Text = "获取中…";
+
+            var currentTask = OpenClawWatcher.GetVersionAsync();
+            var latestTask = OpenClawWatcher.GetLatestVersionAsync();
+
+            var currentResult = await currentTask;
+            CurrentVersionText.Text = currentResult.Success && !string.IsNullOrWhiteSpace(currentResult.Output)
+                ? currentResult.Output
+                : "未知";
+
+            var latestResult = await latestTask;
+            LatestVersionText.Text = latestResult.Success && !string.IsNullOrWhiteSpace(latestResult.Output)
+                ? latestResult.Output
+                : "未知";
+
+            if (currentResult.Success && latestResult.Success
+                && !string.IsNullOrWhiteSpace(currentResult.Output)
+                && !string.IsNullOrWhiteSpace(latestResult.Output))
+            {
+                var current = currentResult.Output.TrimStart('v', 'V');
+                var latest = latestResult.Output.TrimStart('v', 'V');
+
+                if (Version.TryParse(current, out var currentVer) && Version.TryParse(latest, out var latestVer))
+                {
+                    if (latestVer > currentVer)
+                    {
+                        UpdateStatusText.Text = "有新版本可用，点击按钮更新。";
+                    }
+                    else
+                    {
+                        UpdateStatusText.Text = "已是最新版本。";
+                    }
+                }
+                else
+                {
+                    UpdateStatusText.Text = string.Empty;
+                }
+            }
+            else
+            {
+                UpdateStatusText.Text = string.Empty;
+            }
+        }
+
+        // ── Update OpenClaw ──
+
+        private async void UpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isUpdating)
+                return;
+
+            _isUpdating = true;
+            UpdateButton.IsEnabled = false;
+            UpdateInfoBar.IsOpen = false;
+            UpdateStatusText.Text = "正在更新，请在弹出的终端窗口中查看进度…";
+
+            try
+            {
+                var result = await OpenClawWatcher.UpdateAsync();
+
+                if (result.Success)
+                {
+                    UpdateInfoBar.Severity = InfoBarSeverity.Success;
+                    UpdateInfoBar.Title = "更新完成";
+                }
+                else
+                {
+                    UpdateInfoBar.Severity = InfoBarSeverity.Error;
+                    UpdateInfoBar.Title = !string.IsNullOrWhiteSpace(result.Error)
+                        ? $"更新失败: {result.Error}"
+                        : "更新失败";
+                }
+
+                UpdateInfoBar.IsOpen = true;
+            }
+            finally
+            {
+                _isUpdating = false;
+                UpdateButton.IsEnabled = true;
+            }
+
+            await RefreshVersionInfoAsync();
         }
     }
 }

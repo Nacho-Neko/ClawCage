@@ -6,111 +6,92 @@
     Background="Transparent">
 
     <ScrollViewer Padding="24,20,24,24">
-        <StackPanel Spacing="8">
+        <StackPanel Spacing="4">
 
-            <!-- Section: 数据存储 -->
-            <TextBlock Text="数据存储"
+            <!-- ── Section: 常规 ── -->
+            <TextBlock Text="常规"
                        FontSize="12" FontWeight="SemiBold"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                       Margin="4,0,0,2"/>
+                       Margin="4,0,0,4"/>
 
             <!-- 数据存放路径 -->
-            <Expander HorizontalAlignment="Stretch"
-                      HorizontalContentAlignment="Stretch">
-                <Expander.Header>
-                    <Grid ColumnSpacing="14" Margin="0,6"
-                          HorizontalAlignment="Stretch">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+            <Border CornerRadius="8"
+                    BorderThickness="1" Padding="14,12"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8B7;"
-                                  FontSize="18" VerticalAlignment="Center"/>
+                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8B7;"
+                              FontSize="18" VerticalAlignment="Center"/>
 
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="数据存放路径"
-                                       FontSize="14" FontWeight="SemiBold"/>
-                            <TextBlock Text="数据库文件的存储位置，修改后需重启应用生效。"
-                                       FontSize="12"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        </StackPanel>
-
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="数据存放路径"
+                                   FontSize="14" FontWeight="SemiBold"/>
                         <TextBlock x:Name="PathPreview"
-                                   Grid.Column="2"
-                                   VerticalAlignment="Center"
-                                   FontFamily="Cascadia Mono"
-                                   FontSize="11"
+                                   FontFamily="Cascadia Mono" FontSize="11"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxWidth="260"
-                                   Margin="0,0,8,0"/>
-                    </Grid>
-                </Expander.Header>
+                                   />
+                    </StackPanel>
 
-                <!-- 展开内容 -->
-                <StackPanel Spacing="8" Padding="0,4,0,6">
-                    <Grid ColumnSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <Button Grid.Column="2"
+                            Content="浏览…"
+                            MinWidth="72" Height="32"
+                            VerticalAlignment="Center"
+                            Click="ChangePath_Click"/>
+                </Grid>
+            </Border>
 
-                        <TextBox x:Name="PathTextBox"
-                                 IsReadOnly="True"
-                                 PlaceholderText="（使用默认路径）"
-                                 FontFamily="Cascadia Mono"
-                                 FontSize="12"/>
+            <InfoBar x:Name="SavedInfoBar"
+                     Title="路径已更新，重启后生效。"
+                     Severity="Success"
+                     IsOpen="False" IsClosable="True"
+                     Margin="0,0,0,4"/>
 
-                        <Button Grid.Column="1"
-                                Content="浏览…"
-                                MinWidth="80"
-                                VerticalAlignment="Stretch"
-                                Click="ChangePath_Click"/>
-                    </Grid>
+            <!-- 运行模式 -->
+            <Border CornerRadius="8"
+                    BorderThickness="1" Padding="14,12"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                    <InfoBar x:Name="SavedInfoBar"
-                             Title="路径已更新，重启后生效。"
-                             Severity="Success"
-                             IsOpen="False"
-                             IsClosable="True"/>
-                </StackPanel>
-            </Expander>
+                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE839;"
+                              FontSize="18" VerticalAlignment="Center"/>
 
-            <TextBlock Text="运行设置"
-                       FontSize="12" FontWeight="SemiBold"
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                       Margin="4,8,0,2"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="运行模式"
+                                   FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="切换网关模式 / 节点模式"
+                                   FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
 
-            <Expander HorizontalAlignment="Stretch"
-                      HorizontalContentAlignment="Stretch">
-                <Expander.Header>
-                    <Grid ColumnSpacing="14" Margin="0,6"
-                          HorizontalAlignment="Stretch">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <ToggleSwitch x:Name="RunModeSwitch"
+                                  Grid.Column="2"
+                                  OnContent="" OffContent=""
+                                  MinWidth="0"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Toggled="RunModeSwitch_Toggled"/>
+                </Grid>
+            </Border>
 
-                        <StackPanel VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="运行模式"
-                                       FontSize="14" FontWeight="SemiBold"/>
-                            <TextBlock Text="切换网关模式 / 节点模式"
-                                       FontSize="12"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        </StackPanel>
-
-                        <ToggleSwitch x:Name="RunModeSwitch"
-                                      Grid.Column="1"
-                                      OffContent="网关模式"
-                                      OnContent="节点模式"
-                                      VerticalAlignment="Center"
-                                      Toggled="RunModeSwitch_Toggled"/>
-                    </Grid>
-                </Expander.Header>
-
-                <StackPanel Spacing="8" Padding="0,4,0,6">
+            <!-- 节点参数 (仅节点模式) -->
+            <Border x:Name="NodeArgsPanel"
+                    CornerRadius="8"
+                    BorderThickness="1" Padding="14,12"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <StackPanel Spacing="8">
                     <Grid ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -132,23 +113,22 @@
 
                     <InfoBar x:Name="RunModeInfoBar"
                              Severity="Success"
-                             IsOpen="False"
-                             IsClosable="True"/>
+                             IsOpen="False" IsClosable="True"/>
                 </StackPanel>
-            </Expander>
+            </Border>
 
-            <TextBlock Text="OpenClaw 配置"
+            <!-- ── Section: OpenClaw ── -->
+            <TextBlock Text="OpenClaw"
                        FontSize="12" FontWeight="SemiBold"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                       Margin="4,8,0,2"/>
+                       Margin="4,12,0,4"/>
 
-            <!-- 插件总开关 -->
+            <!-- 插件系统 -->
             <Border CornerRadius="8"
-                    BorderThickness="1"
-                    Padding="12"
+                    BorderThickness="1" Padding="14,12"
                     Background="{ThemeResource LayerFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                <Grid ColumnSpacing="14">
+                <Grid ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -162,36 +142,117 @@
                         <TextBlock Text="插件系统"
                                    FontSize="14" FontWeight="SemiBold"/>
                         <TextBlock Text="启用后允许加载已安装的插件扩展。"
-                                   FontSize="12"
+                                   FontSize="11"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
 
                     <ToggleSwitch x:Name="PluginsEnabledToggle"
                                   Grid.Column="2"
-                                  OnContent="已启用" OffContent="已禁用"
+                                  OnContent="" OffContent=""
+                                  MinWidth="0"
+                                  HorizontalAlignment="Right"
                                   VerticalAlignment="Center"
                                   Toggled="PluginsEnabledToggle_Toggled"/>
                 </Grid>
             </Border>
 
+            <!-- 配置文件 -->
             <Border CornerRadius="8"
-                    BorderThickness="1"
-                    Padding="12"
+                    BorderThickness="1" Padding="14,12"
                     Background="{ThemeResource LayerFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                <StackPanel Spacing="6">
-                    <TextBlock Text="配置文件路径"
-                               FontSize="12"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                    <TextBlock x:Name="OpenClawConfigPathText"
-                               FontFamily="Cascadia Mono"
-                               FontSize="12"
-                               TextWrapping="WrapWholeWords"/>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7C3;"
+                              FontSize="18" VerticalAlignment="Center"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="配置文件"
+                                   FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="OpenClawConfigPathText"
+                                   FontFamily="Cascadia Mono" FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="WrapWholeWords"/>
+                    </StackPanel>
+
                     <TextBlock x:Name="OpenClawConfigStatusText"
+                               Grid.Column="2"
                                FontSize="12"
+                               VerticalAlignment="Center"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                </StackPanel>
+                </Grid>
             </Border>
+
+            <!-- ── Section: 更新 ── -->
+            <TextBlock Text="更新"
+                       FontSize="12" FontWeight="SemiBold"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Margin="4,12,0,4"/>
+
+            <!-- 更新 OpenClaw -->
+            <Border CornerRadius="8"
+                    BorderThickness="1" Padding="14,12"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE895;"
+                              FontSize="18" VerticalAlignment="Center"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="更新 OpenClaw"
+                                   FontSize="14" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="当前"
+                                           FontSize="11"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Name="CurrentVersionText"
+                                           Text="获取中…"
+                                           FontFamily="Cascadia Mono" FontSize="11"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="最新"
+                                           FontSize="11"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Name="LatestVersionText"
+                                           Text="获取中…"
+                                           FontFamily="Cascadia Mono" FontSize="11"/>
+                            </StackPanel>
+                            <TextBlock x:Name="UpdateStatusText"
+                                       Text=""
+                                       FontSize="11"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Button x:Name="UpdateButton"
+                            Grid.Column="2"
+                            MinWidth="90" Height="32"
+                            VerticalAlignment="Center"
+                            Click="UpdateButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE72C;" FontSize="13"/>
+                            <TextBlock Text="检查更新" FontSize="13"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <InfoBar x:Name="UpdateInfoBar"
+                     Severity="Success"
+                     IsOpen="False" IsClosable="True"
+                     Margin="0,0,0,4"/>
 
         </StackPanel>
     </ScrollViewer>
