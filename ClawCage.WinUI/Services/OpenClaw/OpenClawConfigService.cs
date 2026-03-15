@@ -117,6 +117,27 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return SaveRootAsync(root);
         }
 
+        internal async Task<(JsonObject Root, PluginsConfig Plugins)?> LoadPluginsConfigAsync()
+        {
+            var root = await LoadRootAsync();
+            if (root is null)
+                return null;
+
+            var pluginsNode = root["plugins"];
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var plugins = pluginsNode?.Deserialize<PluginsConfig>(options) ?? new PluginsConfig();
+            plugins.Allow ??= [];
+
+            return (root, plugins);
+        }
+
+        internal Task<bool> SavePluginsConfigAsync(JsonObject root, PluginsConfig plugins)
+        {
+            plugins.Allow ??= [];
+            root["plugins"] = JsonSerializer.SerializeToNode(plugins);
+            return SaveRootAsync(root);
+        }
+
         private static bool TryGetGatewayPort(JsonObject root, out int port) // pure helper – keep static
         {
             port = 0;

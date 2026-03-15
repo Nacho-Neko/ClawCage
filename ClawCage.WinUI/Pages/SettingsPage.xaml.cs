@@ -1,10 +1,12 @@
 using ClawCage.WinUI.Services;
+using ClawCage.WinUI.Model;
 using ClawCage.WinUI.Services.OpenClaw;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
+using System.Text.Json.Nodes;
 using Windows.Storage.Pickers;
 
 namespace ClawCage.WinUI.Pages
@@ -14,6 +16,7 @@ namespace ClawCage.WinUI.Pages
         private readonly OpenClawConfigService _configService = Ioc.Default.GetRequiredService<OpenClawConfigService>();
 
         private bool _isLoadingRuntimeSettings;
+        private PluginsConfig? _pluginsConfig;
 
         public SettingsPage()
         {
@@ -21,7 +24,7 @@ namespace ClawCage.WinUI.Pages
             Unloaded += SettingsPage_Unloaded;
         }
 
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
             _configService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
@@ -32,6 +35,7 @@ namespace ClawCage.WinUI.Pages
             PathPreview.Text = path;
             RefreshOpenClawConfigStatus();
             LoadRunModeSettings();
+            await LoadPluginsEnabledAsync();
         }
 
         private void SettingsPage_Unloaded(object sender, RoutedEventArgs e)
@@ -137,6 +141,42 @@ namespace ClawCage.WinUI.Pages
                 PathTextBox.Text = folder.Path;
                 PathPreview.Text = folder.Path;
                 SavedInfoBar.IsOpen = true;
+            }
+        }
+
+        private async System.Threading.Tasks.Task LoadPluginsEnabledAsync()
+        {
+            _isLoadingRuntimeSettings = true;
+
+            var result = await _configService.LoadPluginsConfigAsync();
+            if (result is not null)
+            {
+                _pluginsConfig = result.Value.Plugins;
+            }
+            else
+            {
+                _pluginsConfig = new PluginsConfig { Enabled = false, Allow = [] };
+            }
+
+            PluginsEnabledToggle.IsOn = _pluginsConfig.Enabled;
+            _isLoadingRuntimeSettings = false;
+        }
+
+        private async void PluginsEnabledToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingRuntimeSettings || _pluginsConfig is null)
+                return;
+
+            _pluginsConfig.Enabled = PluginsEnabledToggle.IsOn;
+
+            try
+            {
+                var root = await _configService.LoadRootAsync() ?? new JsonObject();
+                await _configService.SavePluginsConfigAsync(root, _pluginsConfig);
+            }
+            catch
+            {
+                // Silently handle save errors
             }
         }
     }

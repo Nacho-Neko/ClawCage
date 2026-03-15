@@ -142,6 +142,38 @@
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                        Margin="4,8,0,2"/>
 
+            <!-- 插件总开关 -->
+            <Border CornerRadius="8"
+                    BorderThickness="1"
+                    Padding="12"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <Grid ColumnSpacing="14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEA86;"
+                              FontSize="18" VerticalAlignment="Center"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="插件系统"
+                                   FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="启用后允许加载已安装的插件扩展。"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+
+                    <ToggleSwitch x:Name="PluginsEnabledToggle"
+                                  Grid.Column="2"
+                                  OnContent="已启用" OffContent="已禁用"
+                                  VerticalAlignment="Center"
+                                  Toggled="PluginsEnabledToggle_Toggled"/>
+                </Grid>
+            </Border>
+
             <Border CornerRadius="8"
                     BorderThickness="1"
                     Padding="12"

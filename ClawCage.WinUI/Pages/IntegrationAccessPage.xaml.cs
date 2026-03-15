@@ -23,7 +23,10 @@ namespace ClawCage.WinUI.Pages
 
         private JsonObject? _rootConfigNode;
         private Integrations? _integrationConfig;
+        private JsonObject? _pluginsRootNode;
+        private PluginsConfig? _pluginsConfig;
         private string? _configPath;
+        private bool _suppressToggleEvents;
 
         public IntegrationAccessPage()
         {
@@ -56,6 +59,7 @@ namespace ClawCage.WinUI.Pages
 
         private async Task LoadIntegrationsAsync()
         {
+            _suppressToggleEvents = true;
             IntegrationItems.Clear();
             StatusText.Text = "读取中...";
 
@@ -64,6 +68,21 @@ namespace ClawCage.WinUI.Pages
 
             // Fetch installed plugins from singleton cache
             var plugins = _pluginService.Plugins;
+
+            // Load plugins config (enabled + allow list)
+            var pluginsConfigResult = await _configService.LoadPluginsConfigAsync();
+            if (pluginsConfigResult is not null)
+            {
+                _pluginsRootNode = pluginsConfigResult.Value.Root;
+                _pluginsConfig = pluginsConfigResult.Value.Plugins;
+            }
+            else
+            {
+                _pluginsRootNode = null;
+                _pluginsConfig = new PluginsConfig { Enabled = false, Allow = [] };
+            }
+
+            var allowSet = new HashSet<string>(_pluginsConfig.Allow ?? [], StringComparer.OrdinalIgnoreCase);
 
             // Collect keys already present in config so we don't duplicate
             var configKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -87,7 +106,7 @@ namespace ClawCage.WinUI.Pages
                             continue;
 
                         configKeys.Add(entry.Key);
-                        IntegrationItems.Add(BuildIntegrationViewItem(entry.Key, integration));
+                        IntegrationItems.Add(BuildIntegrationViewItem(entry.Key, integration, allowSet));
                     }
                 }
 
@@ -100,7 +119,7 @@ namespace ClawCage.WinUI.Pages
                     if (!plugins.TryGetValue(component.Key, out var pluginInfo))
                         continue;
 
-                    IntegrationItems.Add(BuildPluginViewItem(component, pluginInfo));
+                    IntegrationItems.Add(BuildPluginViewItem(component, pluginInfo, allowSet));
                 }
 
                 StatusText.Text = $"已加载 {IntegrationItems.Count} 个接入。";
@@ -109,11 +128,16 @@ namespace ClawCage.WinUI.Pages
             {
                 StatusText.Text = $"读取失败: {ex.Message}";
             }
+            finally
+            {
+                _suppressToggleEvents = false;
+            }
         }
 
         private static IntegrationViewItem BuildPluginViewItem(
             IIntegrationWizardComponent component,
-            OpenClawPluginService.PluginInfo pluginInfo)
+            OpenClawPluginService.PluginInfo pluginInfo,
+            HashSet<string> allowSet)
         {
             var isLoaded = string.Equals(pluginInfo.Status, "loaded", StringComparison.OrdinalIgnoreCase);
             var statusColor = isLoaded
@@ -123,19 +147,20 @@ namespace ClawCage.WinUI.Pages
             return new IntegrationViewItem
             {
                 Key = component.Key,
-                Name = !string.IsNullOrWhiteSpace(pluginInfo.Name) ? pluginInfo.Name : component.Title,
+                Name = component.Title,
                 VersionText = !string.IsNullOrWhiteSpace(pluginInfo.Version) ? pluginInfo.Version : "-",
                 DescriptionText = component.Description,
                 EnabledText = isLoaded ? "已加载" : pluginInfo.Status,
                 StatusColor = new Microsoft.UI.Xaml.Media.SolidColorBrush(statusColor),
                 SourceIntegration = null,
+                IsAllowed = allowSet.Contains(component.Key),
                 IconUrl = !string.IsNullOrEmpty(component.IconResourceName)
                     ? $"ms-appx:///Asset/Integration/{component.IconResourceName}.png"
                     : null
             };
         }
 
-        private static IntegrationViewItem BuildIntegrationViewItem(string integrationKey, Integration integration)
+        private static IntegrationViewItem BuildIntegrationViewItem(string integrationKey, Integration integration, HashSet<string> allowSet)
         {
             IntegrationComponentRegistry.TryGet(integrationKey, out var component);
 
@@ -146,12 +171,13 @@ namespace ClawCage.WinUI.Pages
             return new IntegrationViewItem
             {
                 Key = integrationKey,
-                Name = integration.Name ?? integrationKey,
+                Name = component?.Title ?? integration.Name ?? integrationKey,
                 VersionText = "-",
                 DescriptionText = integration.Description ?? string.Empty,
                 EnabledText = integration.Enabled ? "启用" : "禁用",
                 StatusColor = new Microsoft.UI.Xaml.Media.SolidColorBrush(statusColor),
                 SourceIntegration = integration,
+                IsAllowed = allowSet.Contains(integrationKey),
                 IconUrl = component is not null && !string.IsNullOrEmpty(component.IconResourceName)
                     ? $"ms-appx:///Asset/Integration/{component.IconResourceName}.png"
                     : null
@@ -213,6 +239,56 @@ namespace ClawCage.WinUI.Pages
 
             StatusText.Text = $"检查「{item.Name}」更新中...";
             // TODO: implement update check logic
+        }
+
+        private async void CardToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_suppressToggleEvents || _pluginsConfig is null)
+                return;
+
+            if (sender is not ToggleSwitch { Tag: IntegrationViewItem item })
+                return;
+
+            _pluginsConfig.Allow ??= [];
+
+            if (item.IsAllowed && !_pluginsConfig.Allow.Contains(item.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                // Was toggled ON but somehow not in list — skip to avoid duplicate
+            }
+
+            if (((ToggleSwitch)sender).IsOn)
+            {
+                if (!_pluginsConfig.Allow.Contains(item.Key, StringComparer.OrdinalIgnoreCase))
+                    _pluginsConfig.Allow.Add(item.Key);
+                item.IsAllowed = true;
+            }
+            else
+            {
+                _pluginsConfig.Allow.RemoveAll(k => string.Equals(k, item.Key, StringComparison.OrdinalIgnoreCase));
+                item.IsAllowed = false;
+            }
+
+            await SavePluginsConfigInternalAsync();
+        }
+
+        private async Task<bool> SavePluginsConfigInternalAsync()
+        {
+            if (_pluginsConfig is null)
+                return false;
+
+            try
+            {
+                // Always reload root to avoid stale state
+                var root = await _configService.LoadRootAsync() ?? new JsonObject();
+                await _configService.SavePluginsConfigAsync(root, _pluginsConfig);
+                StatusText.Text = "插件配置已保存。";
+                return true;
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = $"保存失败: {ex.Message}";
+                return false;
+            }
         }
 
         private async Task EditIntegrationAsync(IntegrationViewItem integrationItem)
@@ -359,6 +435,7 @@ namespace ClawCage.WinUI.Pages
             public string VersionText { get; set; } = string.Empty;
             public string DescriptionText { get; set; } = string.Empty;
             public string EnabledText { get; set; } = string.Empty;
+            public bool IsAllowed { get; set; }
             public Microsoft.UI.Xaml.Media.SolidColorBrush StatusColor { get; set; }
             public Integration? SourceIntegration { get; set; }
             public string? IconUrl { get; set; }
