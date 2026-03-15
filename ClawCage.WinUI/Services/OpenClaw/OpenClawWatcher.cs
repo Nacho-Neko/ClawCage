@@ -123,21 +123,14 @@ namespace ClawCage.WinUI.Services.OpenClaw
             var runMode = AppSettings.GetString(AppSettingKeys.RunMode) ?? "gateway";
             try
             {
+                var databasePath = AppRuntimeState.DatabasePath;
+                var openClawCmd = Path.Combine(databasePath, "openclaw.cmd");
+
                 var command = useVisibleWindow
-                    ? WarpcliHelper.CreateConfiguredCliCommand("cmd.exe", AppRuntimeState.DatabasePath)
-                        .WithArguments(args =>
-                        {
-                            args.Add("/c");
-                            args.Add("start");
-                            args.Add("\"OpenClaw\"");
-                            args.Add("/wait");
-                            args.Add("OpenClaw");
-                            args.Add(runMode);
-                        })
-                        .WithValidation(CommandResultValidation.None)
-                    : WarpcliHelper.CreateConfiguredCliCommand(Path.Combine(AppRuntimeState.DatabasePath, "openclaw.cmd"), AppRuntimeState.DatabasePath)
-                        .WithArguments(args => args.Add(runMode))
-                        .WithValidation(CommandResultValidation.None);
+                    ? WarpcliHelper.CreateVisibleCommand("OpenClaw", openClawCmd,
+                        args => args.Add(runMode), databasePath)
+                    : WarpcliHelper.CreateBackgroundCommand(openClawCmd,
+                        args => args.Add(runMode), databasePath);
 
                 _ = await command.ExecuteAsync(cancellationToken);
             }
@@ -162,5 +155,100 @@ namespace ClawCage.WinUI.Services.OpenClaw
             lock (SyncRoot)
                 return _databasePath ?? AppRuntimeState.DatabasePath;
         }
+
+        internal static async Task<CommandResult> GetVersionAsync(CancellationToken cancellationToken = default)
+        {
+            var openClawCmdPath = Path.Combine(AppRuntimeState.DatabasePath, "openclaw.cmd");
+            if (!File.Exists(openClawCmdPath))
+                return new CommandResult(false, -1, string.Empty, $"未找到命令: {openClawCmdPath}");
+
+            try
+            {
+                var command = WarpcliHelper.CreateConfiguredCliCommand(openClawCmdPath, AppRuntimeState.DatabasePath)
+                    .WithArguments(args => args.Add("-V"))
+                    .WithValidation(CommandResultValidation.None);
+
+                var result = await command.ExecuteBufferedAsync(cancellationToken);
+                var version = result.StandardOutput.Trim();
+                return new CommandResult(result.ExitCode == 0, result.ExitCode, version, result.StandardError.Trim());
+            }
+            catch (Exception ex)
+            {
+                return new CommandResult(false, -1, string.Empty, ex.Message);
+            }
+        }
+
+        internal static async Task<CommandResult> GetLatestVersionAsync(CancellationToken cancellationToken = default)
+        {
+            var nodePath = SecureConfigStore.GetEnvironmentValue("NODE_DIR");
+            if (string.IsNullOrWhiteSpace(nodePath))
+                return new CommandResult(false, -1, string.Empty, "未配置 NODE_DIR。");
+
+            var npmCmd = Path.Combine(nodePath, "npm.cmd");
+            if (!File.Exists(npmCmd))
+                return new CommandResult(false, -1, string.Empty, $"未找到 npm: {npmCmd}");
+
+            try
+            {
+                var command = WarpcliHelper.CreateConfiguredCliCommand(npmCmd, AppRuntimeState.DatabasePath)
+                    .WithArguments(args =>
+                    {
+                        args.Add("view");
+                        args.Add("openclaw");
+                        args.Add("version");
+                        args.Add($"--registry={NodeJsHelper.NpmRegistry}");
+                    })
+                    .WithValidation(CommandResultValidation.None);
+
+                var result = await command.ExecuteBufferedAsync(cancellationToken);
+                var version = result.StandardOutput.Trim();
+                return new CommandResult(result.ExitCode == 0, result.ExitCode, version, result.StandardError.Trim());
+            }
+            catch (Exception ex)
+            {
+                return new CommandResult(false, -1, string.Empty, ex.Message);
+            }
+        }
+
+        internal static async Task<CommandResult> UpdateAsync(CancellationToken cancellationToken = default)
+        {
+            var nodePath = SecureConfigStore.GetEnvironmentValue("NODE_DIR");
+            if (string.IsNullOrWhiteSpace(nodePath))
+                return new CommandResult(false, -1, string.Empty, "未配置 NODE_DIR。");
+
+            var npmCmd = Path.Combine(nodePath, "npm.cmd");
+            if (!File.Exists(npmCmd))
+                return new CommandResult(false, -1, string.Empty, $"未找到 npm: {npmCmd}");
+
+            try
+            {
+                var databasePath = AppRuntimeState.DatabasePath;
+
+                var command = WarpcliHelper.CreateVisibleCommand("OpenClaw Update", npmCmd, args =>
+                {
+                    args.Add("i");
+                    args.Add("-g");
+                    args.Add("openclaw");
+                    args.Add($"--prefix={databasePath}");
+                    args.Add($"--registry={NodeJsHelper.NpmRegistry}");
+                    args.Add("--loglevel=info");
+                    args.Add("--progress=false");
+                    args.Add("--no-audit");
+                    args.Add("--no-fund");
+                }, databasePath);
+
+                var result = await command.ExecuteBufferedAsync(cancellationToken);
+                return new CommandResult(result.ExitCode == 0, result.ExitCode, result.StandardOutput.Trim(), result.StandardError.Trim());
+            }
+            catch (OperationCanceledException)
+            {
+                return new CommandResult(false, -1, string.Empty, "更新已取消。");
+            }
+            catch (Exception ex)
+            {
+                return new CommandResult(false, -1, string.Empty, ex.Message);
+            }
+        }
+
     }
 }
