@@ -9,7 +9,7 @@ namespace ClawCage.WinUI.Components
     internal static class HomeNavigationMenu
     {
         internal const string OverviewTag = "overview";
-        internal const string ModelAccessTag = "model-access";
+        internal const string ModelAccessTag = "modelAccess";
         internal const string SettingsTag = "settings";
         internal const string AboutTag = "about";
 
