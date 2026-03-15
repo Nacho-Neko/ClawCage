@@ -9,23 +9,23 @@ using System.Threading.Tasks;
 
 namespace ClawCage.WinUI.Services.OpenClaw
 {
-    internal static class OpenClawConfigService
+    internal sealed class OpenClawConfigService
     {
         private const string ConfigDirName = ".openclaw";
         private const string ConfigFileName = "openclaw.json";
 
-        private static readonly object SyncRoot = new();
-        private static FileSystemWatcher? _watcher;
-        private static Timer? _debounceTimer;
+        private readonly object _syncRoot = new();
+        private FileSystemWatcher? _watcher;
+        private Timer? _debounceTimer;
 
-        internal static event EventHandler? ConfigChanged;
+        internal event EventHandler? ConfigChanged;
 
-        static OpenClawConfigService()
+        internal void Initialize()
         {
             EnsureWatcher();
         }
 
-        internal static string GetConfigPath()
+        internal string GetConfigPath()
         {
             return Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -33,9 +33,9 @@ namespace ClawCage.WinUI.Services.OpenClaw
                 ConfigFileName);
         }
 
-        internal static bool IsInitialized() => File.Exists(GetConfigPath());
+        internal bool IsInitialized() => File.Exists(GetConfigPath());
 
-        internal static async Task<JsonObject?> LoadRootAsync()
+        internal async Task<JsonObject?> LoadRootAsync()
         {
             var path = GetConfigPath();
             if (!File.Exists(path))
@@ -45,7 +45,7 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return JsonNode.Parse(json) as JsonObject;
         }
 
-        internal static async Task<bool> SaveRootAsync(JsonObject root)
+        internal async Task<bool> SaveRootAsync(JsonObject root)
         {
             var path = GetConfigPath();
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -56,7 +56,7 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return true;
         }
 
-        internal static async Task<string?> TryGetConsoleUrlAsync()
+        internal async Task<string?> TryGetConsoleUrlAsync()
         {
             var root = await LoadRootAsync();
             if (root is null)
@@ -73,7 +73,7 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return stringBuilder.ToString();
         }
 
-        internal static async Task<(JsonObject Root, Models Models)?> LoadModelsConfigAsync()
+        internal async Task<(JsonObject Root, Models Models)?> LoadModelsConfigAsync()
         {
             var root = await LoadRootAsync();
             if (root is null)
@@ -88,7 +88,7 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return (root, models);
         }
 
-        internal static Task<bool> SaveModelsConfigAsync(JsonObject root, Models models)
+        internal Task<bool> SaveModelsConfigAsync(JsonObject root, Models models)
         {
             models.Mode = string.IsNullOrWhiteSpace(models.Mode) ? "merge" : models.Mode;
             models.Providers ??= [];
@@ -96,7 +96,28 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return SaveRootAsync(root);
         }
 
-        private static bool TryGetGatewayPort(JsonObject root, out int port)
+        internal async Task<(JsonObject Root, Integrations Integrations)?> LoadIntegrationConfigAsync()
+        {
+            var root = await LoadRootAsync();
+            if (root is null)
+                return null;
+
+            var integrationsNode = root["integrations"];
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var integrations = integrationsNode?.Deserialize<Integrations>(options) ?? new Integrations();
+            integrations.Providers ??= [];
+
+            return (root, integrations);
+        }
+
+        internal Task<bool> SaveIntegrationConfigAsync(JsonObject root, Integrations integrations)
+        {
+            integrations.Providers ??= [];
+            root["integrations"] = JsonSerializer.SerializeToNode(integrations);
+            return SaveRootAsync(root);
+        }
+
+        private static bool TryGetGatewayPort(JsonObject root, out int port) // pure helper – keep static
         {
             port = 0;
             if (root["gateway"] is not JsonObject gateway)
@@ -158,9 +179,9 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return true;
         }
 
-        private static void EnsureWatcher()
+        private void EnsureWatcher()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 if (_watcher is not null)
                     return;
@@ -183,16 +204,16 @@ namespace ClawCage.WinUI.Services.OpenClaw
             }
         }
 
-        private static void OnWatcherEvent(object sender, FileSystemEventArgs e)
+        private void OnWatcherEvent(object sender, FileSystemEventArgs e)
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 _debounceTimer ??= new Timer(_ => RaiseConfigChanged());
                 _debounceTimer.Change(250, Timeout.Infinite);
             }
         }
 
-        private static void RaiseConfigChanged()
+        private void RaiseConfigChanged()
         {
             ConfigChanged?.Invoke(null, EventArgs.Empty);
         }

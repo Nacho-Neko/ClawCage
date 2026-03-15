@@ -1,5 +1,6 @@
 using ClawCage.WinUI.Components;
 using ClawCage.WinUI.Services.OpenClaw;
+using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
@@ -9,6 +10,9 @@ namespace ClawCage.WinUI.Pages
 {
     public sealed partial class HomePage : Page
     {
+        private readonly OpenClawConfigService _configService = Ioc.Default.GetRequiredService<OpenClawConfigService>();
+        private readonly OpenClawPluginService _pluginService = Ioc.Default.GetRequiredService<OpenClawPluginService>();
+
         public HomePage()
         {
             InitializeComponent();
@@ -17,16 +21,21 @@ namespace ClawCage.WinUI.Pages
             InitializeNavigationMenu();
         }
 
-        private void HomePage_Loaded(object sender, RoutedEventArgs e)
+        private async void HomePage_Loaded(object sender, RoutedEventArgs e)
         {
-            OpenClawConfigService.ConfigChanged -= OnConfigChanged;
-            OpenClawConfigService.ConfigChanged += OnConfigChanged;
+            _configService.Initialize();
+
+            _configService.ConfigChanged -= OnConfigChanged;
+            _configService.ConfigChanged += OnConfigChanged;
+
+            await _pluginService.LoadAsync();
+
             UpdateModelNavigationEnabled();
         }
 
         private void HomePage_Unloaded(object sender, RoutedEventArgs e)
         {
-            OpenClawConfigService.ConfigChanged -= OnConfigChanged;
+            _configService.ConfigChanged -= OnConfigChanged;
         }
 
         private void OnConfigChanged(object? sender, EventArgs e)
@@ -38,7 +47,7 @@ namespace ClawCage.WinUI.Pages
         {
             var tag = args.SelectedItemContainer?.Tag?.ToString();
 
-            if (tag == HomeNavigationMenu.ModelAccessTag && !OpenClawConfigService.IsInitialized())
+            if (tag == HomeNavigationMenu.ModelAccessTag && !_configService.IsInitialized())
             {
                 var overviewItem = NavView.MenuItems
                     .OfType<NavigationViewItem>()
@@ -80,7 +89,7 @@ namespace ClawCage.WinUI.Pages
             if (modelItem is null)
                 return;
 
-            var isInitialized = OpenClawConfigService.IsInitialized();
+            var isInitialized = _configService.IsInitialized();
             modelItem.IsEnabled = isInitialized;
 
             if (!isInitialized && ReferenceEquals(NavView.SelectedItem, modelItem))

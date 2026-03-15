@@ -2,10 +2,10 @@ using ClawCage.WinUI.Components.Providers;
 using ClawCage.WinUI.Model;
 using ClawCage.WinUI.Services.OpenClaw;
 using ClawCage.WinUI.ViewModels;
+using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -19,6 +19,8 @@ namespace ClawCage.WinUI.Pages
 {
     public sealed partial class ModelAccessPage : Page
     {
+        private readonly OpenClawConfigService _configService = Ioc.Default.GetRequiredService<OpenClawConfigService>();
+
         public ObservableCollection<ProviderViewItem> ProviderItems { get; } = [];
 
         private JsonObject? _rootConfigNode;
@@ -34,14 +36,14 @@ namespace ClawCage.WinUI.Pages
 
         private async void ModelAccessPage_Loaded(object sender, RoutedEventArgs e)
         {
-            OpenClawConfigService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
-            OpenClawConfigService.ConfigChanged += OpenClawConfigService_ConfigChanged;
+            _configService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
+            _configService.ConfigChanged += OpenClawConfigService_ConfigChanged;
             await LoadModelsAsync();
         }
 
         private void ModelAccessPage_Unloaded(object sender, RoutedEventArgs e)
         {
-            OpenClawConfigService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
+            _configService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
         }
 
         private void OpenClawConfigService_ConfigChanged(object? sender, EventArgs e)
@@ -59,10 +61,10 @@ namespace ClawCage.WinUI.Pages
             ProviderItems.Clear();
             StatusText.Text = "读取中...";
 
-            _configPath = OpenClawConfigService.GetConfigPath();
+            _configPath = _configService.GetConfigPath();
             ProviderComponentRegistry.EnsureInitialized();
 
-            var modelsConfigResult = await OpenClawConfigService.LoadModelsConfigAsync();
+            var modelsConfigResult = await _configService.LoadModelsConfigAsync();
             if (modelsConfigResult is null)
             {
                 ModeText.Text = "Mode: -";
@@ -422,7 +424,7 @@ namespace ClawCage.WinUI.Pages
 
             try
             {
-                await OpenClawConfigService.SaveModelsConfigAsync(_rootConfigNode, _modelsConfig);
+                await _configService.SaveModelsConfigAsync(_rootConfigNode, _modelsConfig);
                 StatusText.Text = "保存成功。";
                 return true;
             }

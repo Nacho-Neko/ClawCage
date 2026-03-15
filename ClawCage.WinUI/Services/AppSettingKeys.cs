@@ -8,5 +8,6 @@ namespace ClawCage.WinUI.Services
         internal const string OpenClawVisibleWindow = "OpenClawVisibleWindow";
         internal const string NodeHost = "NodeHost";
         internal const string NodePort = "NodePort";
+        internal const string WaterfallPlugins = "WaterfallPlugins";
     }
 }

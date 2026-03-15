@@ -1,5 +1,6 @@
 using ClawCage.WinUI.Services;
 using ClawCage.WinUI.Services.OpenClaw;
+using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -10,6 +11,8 @@ namespace ClawCage.WinUI.Pages
 {
     public sealed partial class SettingsPage : Page
     {
+        private readonly OpenClawConfigService _configService = Ioc.Default.GetRequiredService<OpenClawConfigService>();
+
         private bool _isLoadingRuntimeSettings;
 
         public SettingsPage()
@@ -21,8 +24,8 @@ namespace ClawCage.WinUI.Pages
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-            OpenClawConfigService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
-            OpenClawConfigService.ConfigChanged += OpenClawConfigService_ConfigChanged;
+            _configService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
+            _configService.ConfigChanged += OpenClawConfigService_ConfigChanged;
 
             var path = AppRuntimeState.DatabasePath;
             PathTextBox.Text = path;
@@ -33,7 +36,7 @@ namespace ClawCage.WinUI.Pages
 
         private void SettingsPage_Unloaded(object sender, RoutedEventArgs e)
         {
-            OpenClawConfigService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
+            _configService.ConfigChanged -= OpenClawConfigService_ConfigChanged;
         }
 
         private void OpenClawConfigService_ConfigChanged(object? sender, EventArgs e)
@@ -43,9 +46,9 @@ namespace ClawCage.WinUI.Pages
 
         private void RefreshOpenClawConfigStatus()
         {
-            var configPath = OpenClawConfigService.GetConfigPath();
+            var configPath = _configService.GetConfigPath();
             OpenClawConfigPathText.Text = configPath;
-            OpenClawConfigStatusText.Text = OpenClawConfigService.IsInitialized()
+            OpenClawConfigStatusText.Text = _configService.IsInitialized()
                 ? "状态：已生成（监听中）"
                 : "状态：未生成（监听中）";
         }

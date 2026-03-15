@@ -14,6 +14,8 @@ namespace ClawCage.WinUI.ViewModels
 {
     public sealed partial class OverviewPageViewModel : ObservableObject
     {
+        private readonly OpenClawConfigService _configService;
+
         private XamlRoot? _xamlRoot;
         private bool _isInitialized;
         private bool _isRunning;
@@ -36,14 +38,19 @@ namespace ClawCage.WinUI.ViewModels
         [ObservableProperty] private bool _openConsoleEnabled = false;
         [ObservableProperty] private bool _isHelpEnabled = true;
 
+        internal OverviewPageViewModel(OpenClawConfigService configService)
+        {
+            _configService = configService;
+        }
+
         internal void Initialize(XamlRoot xamlRoot) => _xamlRoot = xamlRoot;
 
         [RelayCommand]
         private async Task RefreshAsync()
         {
-            _isInitialized = OpenClawConfigService.IsInitialized();
+            _isInitialized = _configService.IsInitialized();
             _isRunning = _isInitialized && OpenClawWatcher.IsRunning;
-            _consoleUrl = await OpenClawConfigService.TryGetConsoleUrlAsync();
+            _consoleUrl = await _configService.TryGetConsoleUrlAsync();
             UpdateState();
         }
 
@@ -139,11 +146,11 @@ namespace ClawCage.WinUI.ViewModels
             await OpenClawWatcher.InitializeAsync();
             await Task.Delay(500);
 
-            _isInitialized = OpenClawConfigService.IsInitialized();
+            _isInitialized = _configService.IsInitialized();
             SetBusy(false);
 
             if (!_isInitialized)
-                ShowDialog("初始化未完成", $"未检测到配置文件: {OpenClawConfigService.GetConfigPath()}");
+                ShowDialog("初始化未完成", $"未检测到配置文件: {_configService.GetConfigPath()}");
 
             await RefreshAsync();
         }

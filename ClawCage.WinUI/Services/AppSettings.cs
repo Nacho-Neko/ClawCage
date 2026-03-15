@@ -1,6 +1,8 @@
 using LiteDB;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Velopack.Locators;
 
 namespace ClawCage.WinUI.Services
@@ -57,6 +59,50 @@ namespace ClawCage.WinUI.Services
                 return;
 
             UpsertValue(key, new BsonValue(value));
+        }
+
+        internal static List<string> GetStringList(string key)
+        {
+            var value = GetValue(key);
+            if (value is null || value.IsNull)
+                return [];
+
+            if (value.IsArray)
+                return [.. value.AsArray.Select(v => v.AsString)];
+
+            return [];
+        }
+
+        internal static void SetStringList(string key, List<string> values)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                return;
+
+            var array = new BsonArray(values.Select(v => new BsonValue(v)));
+            UpsertValue(key, array);
+        }
+
+        internal static void AddToStringList(string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value))
+                return;
+
+            var list = GetStringList(key);
+            if (!list.Contains(value, StringComparer.OrdinalIgnoreCase))
+            {
+                list.Add(value);
+                SetStringList(key, list);
+            }
+        }
+
+        internal static void RemoveFromStringList(string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value))
+                return;
+
+            var list = GetStringList(key);
+            if (list.RemoveAll(v => string.Equals(v, value, StringComparison.OrdinalIgnoreCase)) > 0)
+                SetStringList(key, list);
         }
 
         private static BsonValue? GetValue(string key)
