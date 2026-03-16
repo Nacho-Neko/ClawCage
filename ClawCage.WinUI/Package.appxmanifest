@@ -18,7 +18,7 @@
   <Properties>
     <DisplayName>ClawCage.WinUI</DisplayName>
     <PublisherDisplayName>0xuu8</PublisherDisplayName>
-    <Logo>Assets\StoreLogo.png</Logo>
+    <Logo>Asset\ClawCage\Square44x44Logo.png</Logo>
   </Properties>
 
   <Dependencies>
@@ -38,10 +38,10 @@
         DisplayName="ClawCage.WinUI"
         Description="ClawCage.WinUI"
         BackgroundColor="transparent"
-        Square150x150Logo="Assets\Square150x150Logo.png"
-        Square44x44Logo="Assets\Square44x44Logo.png">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
-        <uap:SplashScreen Image="Assets\SplashScreen.png" />
+        Square150x150Logo="Asset\ClawCage\Square150x150Logo.png"
+        Square44x44Logo="Asset\ClawCage\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Asset\ClawCage\Wide310x150Logo.png" />
+        <uap:SplashScreen Image="Asset\ClawCage\Square150x150Logo.png" />
       </uap:VisualElements>
     </Application>
   </Applications>

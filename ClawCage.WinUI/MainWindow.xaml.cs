@@ -18,6 +18,9 @@ namespace ClawCage.WinUI
 
             InitializeComponent();
 
+            AppWindow.SetIcon(System.IO.Path.Combine(
+                AppContext.BaseDirectory, "Asset", "ClawCage", "ClawCage.ico"));
+
             const int width = 1280;
             const int height = 800;
             var workArea = DisplayArea
