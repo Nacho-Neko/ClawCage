@@ -29,12 +29,13 @@ namespace ClawCage.WinUI.Services.Tools.Helper
             Action<ArgumentsBuilder> configureArgs,
             string? workingDirectory = null)
         {
+            string newTitle = windowTitle.Replace(" ", "-");
             return CreateConfiguredCliCommand("cmd.exe", workingDirectory)
                 .WithArguments(args =>
                 {
                     args.Add("/c");
                     args.Add("start");
-                    args.Add($"\"{windowTitle}\"");
+                    args.Add($"\"{newTitle}\"");
                     args.Add("/wait");
                     args.Add(executablePath);
                     configureArgs(args);
