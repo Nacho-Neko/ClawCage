@@ -11,6 +11,7 @@ namespace ClawCage.WinUI.Components
         internal const string OverviewTag = "overview";
         internal const string ModelAccessTag = "modelAccess";
         internal const string IntegrationAccessTag = "integrationAccess";
+        internal const string ScheduledTasksTag = "scheduledTasks";
         internal const string SettingsTag = "settings";
         internal const string AboutTag = "about";
 
@@ -19,6 +20,7 @@ namespace ClawCage.WinUI.Components
             CreateMenuItem("概览", OverviewTag, "\uE80F"),
             CreateMenuItem("模型", ModelAccessTag, "\uE8D4"),
             CreateMenuItem("接入", IntegrationAccessTag, "\uE71B"),
+            CreateMenuItem("定时", ScheduledTasksTag, "\uE823"),
             CreateMenuItem("设置", SettingsTag, "\uE713")
         ];
 
@@ -32,6 +34,7 @@ namespace ClawCage.WinUI.Components
             OverviewTag => typeof(OverviewPage),
             ModelAccessTag => typeof(ModelAccessPage),
             IntegrationAccessTag => typeof(IntegrationAccessPage),
+            ScheduledTasksTag => typeof(ScheduledTasksPage),
             SettingsTag => typeof(SettingsPage),
             AboutTag => typeof(AboutPage),
             _ => null
