@@ -184,7 +184,8 @@ namespace ClawCage.WinUI.Components.ScheduledTasks
             var bestEffortToggle = new ToggleSwitch
             {
                 Header = "尽力投递",
-                OnContent = "", OffContent = "",
+                OnContent = "",
+                OffContent = "",
                 IsOn = existing?.Delivery?.BestEffort ?? true
             };
             var bestEffortHint = CreateHint("投递失败时不使任务失败。");
@@ -207,7 +208,8 @@ namespace ClawCage.WinUI.Components.ScheduledTasks
             var clearAgentOverrideToggle = new ToggleSwitch
             {
                 Header = "清除代理覆盖",
-                OnContent = "", OffContent = "",
+                OnContent = "",
+                OffContent = "",
                 IsOn = existing?.ClearAgentOverride ?? false
             };
             var clearAgentOverrideHint = CreateHint("强制此任务使用网关默认助手。");
@@ -223,7 +225,8 @@ namespace ClawCage.WinUI.Components.ScheduledTasks
             var lightContextToggle = new ToggleSwitch
             {
                 Header = "Light context",
-                OnContent = "", OffContent = "",
+                OnContent = "",
+                OffContent = "",
                 IsOn = existing?.Payload?.LightContext ?? false
             };
             var lightContextHint = CreateHint("使用轻量级引导上下文运行此代理任务。");
