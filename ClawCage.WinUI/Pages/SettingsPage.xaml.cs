@@ -245,6 +245,28 @@ namespace ClawCage.WinUI.Pages
             if (_isUpdating)
                 return;
 
+            // Check if already on latest version
+            var currentText = CurrentVersionText.Text?.Trim() ?? "";
+            var latestText = LatestVersionText.Text?.Trim() ?? "";
+
+            if (!string.IsNullOrEmpty(currentText)
+                && !string.IsNullOrEmpty(latestText)
+                && currentText.Contains(latestText, StringComparison.OrdinalIgnoreCase))
+            {
+                var confirm = new ContentDialog
+                {
+                    Title = "版本已是最新",
+                    Content = $"当前版本 {CurrentVersionText.Text} 已是最新版本，是否仍要继续更新？",
+                    PrimaryButtonText = "继续更新",
+                    CloseButtonText = "取消",
+                    DefaultButton = ContentDialogButton.Close,
+                    XamlRoot = XamlRoot
+                };
+
+                if (await confirm.ShowAsync() != ContentDialogResult.Primary)
+                    return;
+            }
+
             _isUpdating = true;
             UpdateButton.IsEnabled = false;
             UpdateInfoBar.IsOpen = false;
