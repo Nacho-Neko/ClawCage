@@ -1,4 +1,6 @@
-﻿using ClawCage.WinUI.Services.OpenClaw;
+﻿using ClawCage.WinUI.Services.Agents;
+using ClawCage.WinUI.Services.Cron;
+using ClawCage.WinUI.Services.OpenClaw;
 using ClawCage.WinUI.ViewModels;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +25,8 @@ namespace ClawCage.WinUI
                     // Services — singleton
                     services.AddSingleton<OpenClawConfigService>();
                     services.AddSingleton<OpenClawPluginService>();
+                    services.AddSingleton<CronConfigService>();
+                    services.AddSingleton<AgentsConfigService>();
 
                     // ViewModels
                     services.AddTransient(sp =>
@@ -34,7 +38,7 @@ namespace ClawCage.WinUI
             Ioc.Default.ConfigureServices(Host.Services);
         }
 
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
             MainWindow = new MainWindow();
             MainWindow.Activate();

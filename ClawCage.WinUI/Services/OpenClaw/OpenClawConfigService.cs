@@ -178,6 +178,35 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return MergeAndSaveAsync("plugins", JsonSerializer.SerializeToNode(plugins, WriteOptions));
         }
 
+        internal async Task<(JsonObject Root, List<ScheduledTaskConfig> Tasks)?> LoadScheduledTasksAsync()
+        {
+            var root = await LoadRootAsync();
+            if (root is null)
+                return null;
+
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var tasks = new List<ScheduledTaskConfig>();
+
+            if (root["scheduled_tasks"] is JsonArray tasksArray)
+            {
+                foreach (var node in tasksArray)
+                {
+                    if (node is null) continue;
+                    var task = node.Deserialize<ScheduledTaskConfig>(options);
+                    if (task is not null)
+                        tasks.Add(task);
+                }
+            }
+
+            return (root, tasks);
+        }
+
+        internal Task<bool> SaveScheduledTasksAsync(List<ScheduledTaskConfig> tasks)
+        {
+            var array = JsonSerializer.SerializeToNode(tasks, WriteOptions);
+            return MergeAndSaveAsync("scheduled_tasks", array);
+        }
+
         private static bool TryGetGatewayPort(JsonObject root, out int port) // pure helper – keep static
         {
             port = 0;

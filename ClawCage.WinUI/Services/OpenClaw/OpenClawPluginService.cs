@@ -83,7 +83,7 @@ namespace ClawCage.WinUI.Services.OpenClaw
 
             try
             {
-                var command = WarpcliHelper.CreateVisibleCommand("OpenClaw-Plugin-Install", openClawCmd, args =>
+                var command = WarpcliHelper.CreateVisibleCommand("OpenClaw Plugin Install", openClawCmd, args =>
                 {
                     args.Add("plugins");
                     args.Add("install");
