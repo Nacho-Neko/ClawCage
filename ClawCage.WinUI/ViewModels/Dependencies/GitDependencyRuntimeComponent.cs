@@ -93,6 +93,7 @@ namespace ClawCage.WinUI.ViewModels
             {
                 await PortableGitHelper.ConfigureDefaultIdentityAsync(gitExe, "mekou", "mekou@mekou.net");
                 await PortableGitHelper.ConfigureGithubUrlReplacementAsync(gitExe);
+                await PortableGitHelper.ConfigureGlobalGithubUrlAsync();
             }
 
             var installed = localResult.Found;

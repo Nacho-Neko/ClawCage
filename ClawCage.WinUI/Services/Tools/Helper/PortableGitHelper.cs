@@ -104,6 +104,27 @@ namespace ClawCage.WinUI.Services.Tools.Helper
             return new ConfigureResult(true, 0, null);
         }
 
+        internal static async Task ConfigureGlobalGithubUrlAsync()
+        {
+            try
+            {
+                await Cli.Wrap("git")
+                    .WithArguments(new[] { "config", "--global", "url.https://github.com/.insteadOf", "git@github.com:" })
+                    .WithValidation(CommandResultValidation.None)
+                    .ExecuteBufferedAsync();
+            }
+            catch { }
+
+            try
+            {
+                await Cli.Wrap("git")
+                    .WithArguments(new[] { "config", "--global", "url.https://.insteadOf", "ssh://" })
+                    .WithValidation(CommandResultValidation.None)
+                    .ExecuteBufferedAsync();
+            }
+            catch { }
+        }
+
         internal static async Task<ConfigureResult> ConfigureDisableCertificateCheckAsync(string gitExePath)
         {
             var portableGitRoot = GetPortableGitRootFromGitExe(gitExePath);
