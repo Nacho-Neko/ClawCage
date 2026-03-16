@@ -9,7 +9,8 @@ namespace ClawCage.WinUI.Services.OpenClaw
     {
         internal static async Task<(bool Success, string Message)> TestCompatibleAsync(string apiKey, string requestUri, string model)
         {
-            using (HttpClient httpClient = new HttpClient()){
+            using (HttpClient httpClient = new HttpClient())
+            {
 
 
                 if (string.IsNullOrWhiteSpace(apiKey))
@@ -43,7 +44,7 @@ namespace ClawCage.WinUI.Services.OpenClaw
 
 
             }
-                
+
         }
     }
 }

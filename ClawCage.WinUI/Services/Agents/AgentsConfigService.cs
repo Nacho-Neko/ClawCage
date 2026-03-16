@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace ClawCage.WinUI.Services.Agents
@@ -22,12 +23,10 @@ namespace ClawCage.WinUI.Services.Agents
         private static readonly JsonSerializerOptions WriteOptions = new()
         {
             WriteIndented = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
-        /// <summary>
-        /// Enumerate all agent IDs by listing subdirectories under ~/.openclaw/agents/.
-        /// </summary>
         public Task<List<string>> ListAgentIdsAsync()
         {
             var ids = new List<string>();
@@ -44,10 +43,38 @@ namespace ClawCage.WinUI.Services.Agents
             return Task.FromResult(ids);
         }
 
-        /// <summary>
-        /// Load the models.json for a specific agent.
-        /// Path: ~/.openclaw/agents/{agentId}/agent/models.json
-        /// </summary>
+        public Task<bool> CreateAgentAsync(string agentId)
+        {
+            if (string.IsNullOrWhiteSpace(agentId))
+                return Task.FromResult(false);
+
+            var agentDir = Path.Combine(AgentsDir, agentId, "agent");
+            Directory.CreateDirectory(agentDir);
+
+            var modelsPath = Path.Combine(agentDir, "models.json");
+            if (!File.Exists(modelsPath))
+            {
+                var empty = new AgentModelsConfig();
+                var json = JsonSerializer.Serialize(empty, WriteOptions);
+                File.WriteAllText(modelsPath, json, Encoding.UTF8);
+            }
+
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteAgentAsync(string agentId)
+        {
+            if (string.IsNullOrWhiteSpace(agentId))
+                return Task.FromResult(false);
+
+            var agentDir = Path.Combine(AgentsDir, agentId);
+            if (!Directory.Exists(agentDir))
+                return Task.FromResult(false);
+
+            Directory.Delete(agentDir, recursive: true);
+            return Task.FromResult(true);
+        }
+
         public async Task<AgentModelsConfig?> LoadModelsAsync(string agentId)
         {
             var path = GetModelsPath(agentId);
@@ -58,9 +85,6 @@ namespace ClawCage.WinUI.Services.Agents
             return JsonSerializer.Deserialize<AgentModelsConfig>(json, ReadOptions);
         }
 
-        /// <summary>
-        /// Save the models.json for a specific agent.
-        /// </summary>
         public async Task<bool> SaveModelsAsync(string agentId, AgentModelsConfig config)
         {
             var path = GetModelsPath(agentId);
@@ -71,9 +95,6 @@ namespace ClawCage.WinUI.Services.Agents
             return true;
         }
 
-        /// <summary>
-        /// Add or update a provider in the agent's models.json.
-        /// </summary>
         public async Task<bool> SaveProviderAsync(string agentId, string providerName, AgentProvider provider)
         {
             var config = await LoadModelsAsync(agentId) ?? new AgentModelsConfig();
@@ -81,9 +102,6 @@ namespace ClawCage.WinUI.Services.Agents
             return await SaveModelsAsync(agentId, config);
         }
 
-        /// <summary>
-        /// Remove a provider from the agent's models.json.
-        /// </summary>
         public async Task<bool> RemoveProviderAsync(string agentId, string providerName)
         {
             var config = await LoadModelsAsync(agentId);
@@ -93,9 +111,6 @@ namespace ClawCage.WinUI.Services.Agents
             return await SaveModelsAsync(agentId, config);
         }
 
-        /// <summary>
-        /// Add or update a model within a provider in the agent's models.json.
-        /// </summary>
         public async Task<bool> SaveModelAsync(string agentId, string providerName, AgentModel model)
         {
             var config = await LoadModelsAsync(agentId) ?? new AgentModelsConfig();
@@ -111,9 +126,6 @@ namespace ClawCage.WinUI.Services.Agents
             return await SaveModelsAsync(agentId, config);
         }
 
-        /// <summary>
-        /// Remove a model from a provider in the agent's models.json.
-        /// </summary>
         public async Task<bool> RemoveModelAsync(string agentId, string providerName, string modelId)
         {
             var config = await LoadModelsAsync(agentId);

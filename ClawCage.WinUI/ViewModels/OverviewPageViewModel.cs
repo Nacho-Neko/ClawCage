@@ -152,6 +152,7 @@ namespace ClawCage.WinUI.ViewModels
             if (!_isInitialized)
                 ShowDialog("初始化未完成", $"未检测到配置文件: {_configService.GetConfigPath()}");
 
+            _configService.NotifyConfigChanged();
             await RefreshAsync();
         }
 
