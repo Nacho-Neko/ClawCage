@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,6 +27,11 @@ namespace ClawCage.WinUI.Services.OpenClaw
         internal void Initialize()
         {
             EnsureWatcher();
+        }
+
+        internal void NotifyConfigChanged()
+        {
+            RaiseConfigChanged();
         }
 
         internal string GetConfigPath()
@@ -51,7 +57,8 @@ namespace ClawCage.WinUI.Services.OpenClaw
         private static readonly JsonSerializerOptions WriteOptions = new()
         {
             WriteIndented = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
         internal async Task<bool> SaveRootAsync(JsonObject root)
@@ -87,6 +94,18 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return await SaveRootAsync(root);
         }
 
+        /// <summary>
+        /// Re-reads the config file, sets multiple keys at once,
+        /// then writes the merged result in a single file operation.
+        /// </summary>
+        private async Task<bool> MergeAndSaveAsync(params (string Key, JsonNode? Value)[] entries)
+        {
+            var root = await LoadRootAsync() ?? new JsonObject();
+            foreach (var (key, value) in entries)
+                root[key] = value;
+            return await SaveRootAsync(root);
+        }
+
         internal async Task<string?> TryGetConsoleUrlAsync()
         {
             var root = await LoadRootAsync();
@@ -119,11 +138,51 @@ namespace ClawCage.WinUI.Services.OpenClaw
             return (root, models);
         }
 
-        internal Task<bool> SaveModelsConfigAsync(JsonObject root, Models models)
+        internal async Task<bool> SaveModelsConfigAsync(JsonObject root, Models models)
         {
             models.Mode = string.IsNullOrWhiteSpace(models.Mode) ? "merge" : models.Mode;
             models.Providers ??= [];
-            return MergeAndSaveAsync("models", JsonSerializer.SerializeToNode(models, WriteOptions));
+
+            // Build the full set of model keys: {providerName}/{model.Id}
+            var allModelKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (providerName, provider) in models.Providers)
+            {
+                if (provider.Models is null) continue;
+                foreach (var model in provider.Models)
+                {
+                    if (!string.IsNullOrEmpty(model.Id))
+                        allModelKeys.Add($"{providerName}/{model.Id}");
+                }
+            }
+
+            // Re-read the latest agents config from disk (not the stale root)
+            var agentsResult = await LoadAgentsConfigAsync();
+            var agents = agentsResult?.Agents ?? new AgentsConfig();
+            agents.Defaults ??= new AgentDefaults();
+            agents.Defaults.Model ??= new AgentDefaultModel();
+            agents.Defaults.Models ??= [];
+
+            // Remove entries that no longer exist in providers
+            var keysToRemove = new List<string>();
+            foreach (var key in agents.Defaults.Models.Keys)
+            {
+                if (!allModelKeys.Contains(key))
+                    keysToRemove.Add(key);
+            }
+            foreach (var key in keysToRemove)
+                agents.Defaults.Models.Remove(key);
+
+            // Add new entries that don't yet exist
+            foreach (var key in allModelKeys)
+            {
+                if (!agents.Defaults.Models.ContainsKey(key))
+                    agents.Defaults.Models[key] = new AgentDefaultModelEntry();
+            }
+
+            // Save both sections atomically
+            return await MergeAndSaveAsync(
+                ("models", JsonSerializer.SerializeToNode(models, WriteOptions)),
+                ("agents", JsonSerializer.SerializeToNode(agents, WriteOptions)));
         }
 
         internal async Task<(JsonObject Root, Dictionary<string, ChannelEntry> Channels)?> LoadChannelsConfigAsync()
@@ -205,6 +264,30 @@ namespace ClawCage.WinUI.Services.OpenClaw
         {
             var array = JsonSerializer.SerializeToNode(tasks, WriteOptions);
             return MergeAndSaveAsync("scheduled_tasks", array);
+        }
+
+        internal async Task<(JsonObject Root, AgentsConfig Agents)?> LoadAgentsConfigAsync()
+        {
+            var root = await LoadRootAsync();
+            if (root is null)
+                return null;
+
+            var agentsNode = root["agents"];
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var agents = agentsNode?.Deserialize<AgentsConfig>(options) ?? new AgentsConfig();
+            agents.Defaults ??= new AgentDefaults();
+            agents.Defaults.Model ??= new AgentDefaultModel();
+            agents.Defaults.Models ??= [];
+
+            return (root, agents);
+        }
+
+        internal Task<bool> SaveAgentsConfigAsync(JsonObject root, AgentsConfig agents)
+        {
+            agents.Defaults ??= new AgentDefaults();
+            agents.Defaults.Model ??= new AgentDefaultModel();
+            agents.Defaults.Models ??= [];
+            return MergeAndSaveAsync("agents", JsonSerializer.SerializeToNode(agents, WriteOptions));
         }
 
         private static bool TryGetGatewayPort(JsonObject root, out int port) // pure helper – keep static
