@@ -3,6 +3,7 @@ using ClawCage.WinUI.Services.OpenClaw;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Linq;
 
@@ -18,6 +19,7 @@ namespace ClawCage.WinUI.Pages
             InitializeComponent();
             Loaded += HomePage_Loaded;
             Unloaded += HomePage_Unloaded;
+            ContentFrame.Navigated += ContentFrame_Navigated;
             InitializeNavigationMenu();
         }
 
@@ -30,7 +32,7 @@ namespace ClawCage.WinUI.Pages
 
             await _pluginService.LoadAsync();
 
-            UpdateModelNavigationEnabled();
+            UpdateNavigationEnabled();
         }
 
         private void HomePage_Unloaded(object sender, RoutedEventArgs e)
@@ -40,14 +42,21 @@ namespace ClawCage.WinUI.Pages
 
         private void OnConfigChanged(object? sender, EventArgs e)
         {
-            _ = DispatcherQueue.TryEnqueue(UpdateModelNavigationEnabled);
+            _ = DispatcherQueue.TryEnqueue(UpdateNavigationEnabled);
+        }
+
+        private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
+        {
+            UpdateNavigationEnabled();
         }
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
             var tag = args.SelectedItemContainer?.Tag?.ToString();
 
-            if (tag == HomeNavigationMenu.ModelAccessTag && !_configService.IsInitialized())
+            if (tag is not null
+                && HomeNavigationMenu.RequiresInitializationTags.Contains(tag)
+                && !_configService.IsInitialized())
             {
                 var overviewItem = NavView.MenuItems
                     .OfType<NavigationViewItem>()
@@ -74,25 +83,31 @@ namespace ClawCage.WinUI.Pages
             foreach (var item in HomeNavigationMenu.CreateFooterMenuItems())
                 NavView.FooterMenuItems.Add(item);
 
-            UpdateModelNavigationEnabled();
+            UpdateNavigationEnabled();
 
             if (NavView.MenuItems.Count > 0)
                 NavView.SelectedItem = NavView.MenuItems[0];
         }
 
-        private void UpdateModelNavigationEnabled()
+        private void UpdateNavigationEnabled()
         {
-            var modelItem = NavView.MenuItems
-                .OfType<NavigationViewItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), HomeNavigationMenu.ModelAccessTag, StringComparison.Ordinal));
-
-            if (modelItem is null)
-                return;
-
             var isInitialized = _configService.IsInitialized();
-            modelItem.IsEnabled = isInitialized;
 
-            if (!isInitialized && ReferenceEquals(NavView.SelectedItem, modelItem))
+            var needsFallback = false;
+
+            foreach (var item in NavView.MenuItems.OfType<NavigationViewItem>())
+            {
+                var tag = item.Tag?.ToString();
+                if (tag is not null && HomeNavigationMenu.RequiresInitializationTags.Contains(tag))
+                {
+                    item.IsEnabled = isInitialized;
+
+                    if (!isInitialized && ReferenceEquals(NavView.SelectedItem, item))
+                        needsFallback = true;
+                }
+            }
+
+            if (needsFallback)
             {
                 var overviewItem = NavView.MenuItems
                     .OfType<NavigationViewItem>()
