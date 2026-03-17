@@ -108,7 +108,7 @@ namespace ClawCage.WinUI.Services.Tools.Helper
         {
             try
             {
-                await Cli.Wrap("git")
+                await WarpcliHelper.CreateSystemCliCommand("git")
                     .WithArguments(new[] { "config", "--global", "url.https://github.com/.insteadOf", "git@github.com:" })
                     .WithValidation(CommandResultValidation.None)
                     .ExecuteBufferedAsync();
@@ -117,7 +117,7 @@ namespace ClawCage.WinUI.Services.Tools.Helper
 
             try
             {
-                await Cli.Wrap("git")
+                await WarpcliHelper.CreateSystemCliCommand("git")
                     .WithArguments(new[] { "config", "--global", "url.https://.insteadOf", "ssh://" })
                     .WithValidation(CommandResultValidation.None)
                     .ExecuteBufferedAsync();

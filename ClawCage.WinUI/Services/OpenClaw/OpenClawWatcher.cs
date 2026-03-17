@@ -128,9 +128,9 @@ namespace ClawCage.WinUI.Services.OpenClaw
 
                 var command = useVisibleWindow
                     ? WarpcliHelper.CreateVisibleCommand("OpenClaw", openClawCmd,
-                        args => args.Add(runMode), databasePath)
+                        args => args.Add(runMode), databasePath, useSystemEnv: true)
                     : WarpcliHelper.CreateBackgroundCommand(openClawCmd,
-                        args => args.Add(runMode), databasePath);
+                        args => args.Add(runMode), databasePath, useSystemEnv: true);
 
                 _ = await command.ExecuteAsync(cancellationToken);
             }
